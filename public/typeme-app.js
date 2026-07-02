@@ -1598,7 +1598,6 @@
       <section class="persona-result-block persona-result-warning">
         <span>${escHtml(title || kicker)}</span>
         <p>${escHtml(copy)}</p>
-        <button class="typeme-action primary" type="button" onclick="startOpen()">${escHtml(isEnLocale() ? "Answer open prompts" : "填写开放题")}</button>
       </section>`;
   }
 
