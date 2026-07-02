@@ -1,66 +1,79 @@
-# MBTI Personality Test
+# TypeMe
 
-> **⚠️ WORK IN PROGRESS — This project is still under active development and not yet feature-complete.**
+TypeMe is a bilingual 16-type personality assessment app. It combines a structured MBTI-style scale with short open-ended prompts, then generates a clearer type profile with supporting evidence, adjacent possibilities, and a more personal interpretation.
 
-A single-page MBTI (Myers-Briggs Type Indicator) personality test application with a Python backend and AI-powered analysis.
+Live demo: https://typeme-beta.vercel.app
 
-## Features
+## Highlights
 
-- **50 Likert-scale questions** covering 5 dimensions: EI, SN, TF, JP, AT
-- **Traditional scoring** with percentage-based dimension results
-- **5 customized open-ended questions** dynamically selected based on your initial results
-- **AI cross-validation** using DeepSeek (configurable to other providers) to verify type against your written responses
-- **32 personality types** (16 types × A/T identity variants)
-- **Type library** with detailed profiles, strengths, weaknesses, and career suggestions
+- 50 scale questions across EI, SN, TF, JP, and AT dimensions
+- Dynamic open-ended prompts selected from borderline or high-signal dimensions
+- Type landing with confidence, adjacent candidates, and dimension coordinates
+- AI-assisted profile synthesis with fallback behavior when AI is unavailable
+- Chinese and English UI localization
+- Type library for browsing the 16 base types
+- Vercel deployment with a small Flask serverless adapter
 
-## Why "Work In Progress"?
+## How It Works
 
-Several areas are still being refined:
+1. The scale test estimates an initial type and identity variant.
+2. The scoring endpoint identifies close dimensions and candidate adjacent types.
+3. Five open prompts collect real-life decision, pressure, and relationship context.
+4. The analysis endpoint combines scale data and written answers into a Type Profile.
 
-- **UI/UX polish**: Text copy, layout details, and visual consistency are being iterated on
-- **State persistence**: Refresh/save behavior across screens is still being stabilized
-- **Open-ended analysis**: The AI analysis flow (quality scoring, fallback handling) is being improved
-- **i18n**: Currently Chinese-only; English translation is planned
-- **Mobile responsiveness**: Some screens need better mobile layout handling
+The result is intended as a reflective profile, not a clinical diagnosis.
 
-## Quick Start
+## Privacy And Data
+
+- Normal answers are stored locally in the browser unless explicitly submitted.
+- API keys are read from environment variables and are not committed.
+- `mbti/config.json` is ignored and should only be used for local development.
+- Vercel production keys should be configured in the Vercel dashboard.
+
+## Studio Status
+
+The deployed Vercel app currently exposes the public test flow only:
+
+- `/`
+- `/api/questions`
+- `/api/score`
+- `/api/analyze`
+
+The internal Studio/admin prototype is not deployed in this repository yet. It requires protected Studio routes, authentication, and Supabase-backed data APIs before `/studio` can be used on Vercel.
+
+## Local Development
+
+Install dependencies:
 
 ```bash
-# 1. Configure AI API key
-cp mbti/config.example.json mbti/config.json
-# Edit mbti/config.json with your API key
-
-# 2. Start the server
-python mbti/server.py --port 8899
-
-# 3. Open in browser
-open http://127.0.0.1:8899
+pip install -r requirements.txt
 ```
 
-## Project Structure
+Run the Vercel Flask adapter locally:
 
-```
-mbti/
-├── server.py            # Python backend (stdlib only, no Flask)
-├── index.html           # Single-page frontend (Tailwind CSS CDN)
-├── questions.json       # 50 Likert questions + open-ended pool + type profiles
-├── config.example.json  # AI provider configuration template
-└── vision_mcp.py        # [Optional] MCP server for Qwen vision (screenshot analysis)
+```bash
+python api/index.py
 ```
 
-## API Endpoints
+For the full local development app, use the main workspace version under `D:\Code\1123\mbti`.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/questions` | GET | Returns all questions and dimension config |
-| `/api/score` | POST | Submit 50 Likert answers → returns type + custom open-ended questions |
-| `/api/analyze` | POST | Submit open-ended answers → returns AI analysis results |
+## Deployment Notes
+
+This repository is adapted for Vercel:
+
+- `api/index.py` is the Flask serverless entry point.
+- `api/templates/index.html` serves the TypeMe app shell.
+- `public/typeme-app.css` and `public/typeme-app.js` provide the active UI layer.
+- `questions.json` is loaded from the project root by the serverless function.
+
+Do not copy the stdlib `BaseHTTPRequestHandler` server from the local workspace into `api/index.py`; the Vercel deployment uses Flask.
 
 ## Tech Stack
 
-- **Backend**: Python stdlib (`http.server`) — no dependencies
-- **Frontend**: Single HTML file, vanilla JavaScript, Tailwind CSS (CDN)
-- **AI**: DeepSeek (default), configurable to GLM, Kimi, or any OpenAI-compatible API
+- Frontend: vanilla JavaScript, CSS, Tailwind CDN
+- Backend: Python Flask on Vercel Serverless Functions
+- AI: OpenAI-compatible chat completion endpoint, configured via environment variables
+- Data: JSON question bank, optional Supabase-backed Studio planned separately
 
 ## License
 
