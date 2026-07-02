@@ -177,7 +177,7 @@ draw.text((tx + 10, y4 + 135), "40M-60M tokens/day", font=font_body, fill=(160, 
 # Ren'Py note
 nx = x4 + 15
 round_rect(nx, y4 + 178, 370, 42, 10, (235, 245, 255))
-draw.text((nx + 15, y4 + 191), "github.com/PCLGO/mbti", font=font_h2, fill=(30, 80, 150))
+draw.text((nx + 15, y4 + 191), "github.com/PCLGO/typeme", font=font_h2, fill=(30, 80, 150))
 draw.text((nx + 230, y4 + 191), "Open Source  |  WIP", font=font_body, fill=(130, 130, 130))
 
 # Application text note

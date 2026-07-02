@@ -1,4 +1,4 @@
-# CLAUDE.md — mbti-public (Vercel 部署版)
+# CLAUDE.md — typeme-public (Vercel 部署版)
 
 ## 概述
 
@@ -7,7 +7,7 @@ Persona Mirror（人格镜像，原 Project Mirror）的 Vercel 部署版本。�
 ## 项目结构（Vercel）
 
 ```
-mbti-public/
+typeme-public/
 ├── api/
 │   ├── index.py           # Flask 应用（服务端函数入口）
 │   └── templates/
@@ -108,10 +108,10 @@ python ../1123/mbti/server.py --host 127.0.0.1 --port 8899
 
 ```powershell
 # 同步前端
-Copy-Item D:\Code\1123\mbti\index.html D:\Code\mbti-public\api\templates\index.html
+Copy-Item D:\Code\1123\mbti\index.html D:\Code\typeme-public\api\templates\index.html
 
 # 同步数据
-Copy-Item D:\Code\1123\mbti\questions.json D:\Code\mbti-public\questions.json
+Copy-Item D:\Code\1123\mbti\questions.json D:\Code\typeme-public\questions.json
 
 # 同步后端逻辑（注意 Vercel 版是 Flask 封装）
 # 手动比较 api/index.py 与 server.py 的逻辑差异
