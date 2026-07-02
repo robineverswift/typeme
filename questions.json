@@ -4,558 +4,934 @@
       "id": 1,
       "dimension": "EI",
       "direction": "E",
-      "text": "遇到新环境时，我通常会主动寻找可以交流的人。"
+      "text": "在陌生场合里，如果话题让我感兴趣，我通常会主动加入对话。",
+      "weight": 1,
+      "scenario_tag": "social_entry",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 2,
       "dimension": "EI",
       "direction": "I",
-      "text": "经历密集社交后，我需要独处一段时间才能恢复状态。"
+      "text": "连续社交之后，我需要一段安静时间把状态找回来。",
+      "weight": 1,
+      "scenario_tag": "social_recovery",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 3,
       "dimension": "EI",
       "direction": "E",
-      "text": "我更容易在对话中边说边整理自己的想法。"
+      "text": "我常常是在说出来的过程中，才把自己的想法整理清楚。",
+      "weight": 1,
+      "scenario_tag": "group_pressure",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 4,
       "dimension": "EI",
       "direction": "I",
-      "text": "重要想法在说出口前，我通常已经在心里反复推演过。"
+      "text": "重要想法在说出口前，我通常已经在心里推演过几遍。",
+      "weight": 1,
+      "scenario_tag": "private_energy",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 5,
       "dimension": "EI",
       "direction": "E",
-      "text": "当团队气氛冷下来时，我会自然地想要把它带动起来。"
+      "text": "团队气氛冷下来时，我会自然地想把互动带起来。",
+      "weight": 1,
+      "scenario_tag": "connection_boundary",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 6,
       "dimension": "EI",
       "direction": "I",
-      "text": "比起参加大型聚会，我更偏好少数几个人的深入交流。"
+      "text": "比起热闹的大聚会，我更喜欢少数几个人的深入交流。",
+      "weight": 1,
+      "scenario_tag": "social_entry",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 7,
       "dimension": "EI",
       "direction": "E",
-      "text": "被很多人关注时，我通常会感到兴奋而不是消耗。"
+      "text": "被人关注时，我更容易感到兴奋，而不是被消耗。",
+      "weight": 1,
+      "scenario_tag": "social_recovery",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 8,
       "dimension": "EI",
       "direction": "I",
-      "text": "我更愿意用文字或安静的方式表达复杂想法。"
+      "text": "复杂想法我更愿意先写下来，或用安静的方式表达。",
+      "weight": 1,
+      "scenario_tag": "group_pressure",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 9,
       "dimension": "EI",
       "direction": "E",
-      "text": "我从与人互动中获得灵感和行动力。"
+      "text": "和人互动会让我更快获得灵感和行动力。",
+      "weight": 1,
+      "scenario_tag": "private_energy",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 10,
       "dimension": "EI",
       "direction": "I",
-      "text": "如果一天没有安静时间，我会明显感到不舒服。"
+      "text": "如果一整天没有独处时间，我会明显感到不舒服。",
+      "weight": 1,
+      "scenario_tag": "connection_boundary",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 11,
       "dimension": "SN",
       "direction": "S",
-      "text": "我更相信已经发生过的经验，而不是未经验证的可能性。"
+      "text": "判断一件事时，我会先看已经发生的事实和可验证的信息。",
+      "weight": 1,
+      "scenario_tag": "intuition_fact",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 12,
       "dimension": "SN",
       "direction": "N",
-      "text": "我经常会从一件小事联想到更大的模式或未来趋势。"
+      "text": "我经常会从一个细节联想到更大的模式、隐喻或未来可能。",
+      "weight": 1,
+      "scenario_tag": "detail_future",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 13,
       "dimension": "SN",
       "direction": "S",
-      "text": "解决问题时，我会先确认事实、流程和具体限制。"
+      "text": "解决问题时，我会先确认流程、限制和手头资源。",
+      "weight": 1,
+      "scenario_tag": "novelty_practical",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 14,
       "dimension": "SN",
       "direction": "N",
-      "text": "比起执行既定步骤，我更享受探索新的解释和可能性。"
+      "text": "比起沿用既定步骤，我更享受探索新的解释或可能性。",
+      "weight": 1,
+      "scenario_tag": "evidence_gap",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 15,
       "dimension": "SN",
       "direction": "S",
-      "text": "我容易注意到别人忽略的细节、数字或实际条件。"
+      "text": "别人忽略的细节、数字或实际条件，我通常很快会注意到。",
+      "weight": 1,
+      "scenario_tag": "imagination_grounding",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 16,
       "dimension": "SN",
       "direction": "N",
-      "text": "我常常被抽象概念、隐喻或长远愿景吸引。"
+      "text": "抽象概念、长远愿景或看不见的联系很容易吸引我。",
+      "weight": 1,
+      "scenario_tag": "intuition_fact",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 17,
       "dimension": "SN",
       "direction": "S",
-      "text": "如果一个想法无法落地，我会很快对它失去兴趣。"
+      "text": "如果一个想法暂时落不了地，我会很快想知道它具体怎么执行。",
+      "weight": 1,
+      "scenario_tag": "detail_future",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 18,
       "dimension": "SN",
       "direction": "N",
-      "text": "即使证据还不完整，我也会根据直觉形成初步判断。"
+      "text": "证据还不完整时，我也会根据直觉形成初步判断。",
+      "weight": 1,
+      "scenario_tag": "novelty_practical",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 19,
       "dimension": "SN",
       "direction": "S",
-      "text": "我喜欢清楚、具体、可执行的说明。"
+      "text": "我喜欢清楚、具体、可以照着做的说明。",
+      "weight": 1,
+      "scenario_tag": "evidence_gap",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 20,
       "dimension": "SN",
       "direction": "N",
-      "text": "我常常思考“如果事情换一种方式会怎样”。"
+      "text": "我经常会想：如果事情换一种方式，会不会出现完全不同的结果。",
+      "weight": 1,
+      "scenario_tag": "imagination_grounding",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 21,
       "dimension": "TF",
       "direction": "T",
-      "text": "做决定时，我会优先考虑逻辑一致性和客观标准。"
+      "text": "做决定时，我会优先检查逻辑是否一致、标准是否公平。",
+      "weight": 1,
+      "scenario_tag": "truth_care",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 22,
       "dimension": "TF",
       "direction": "F",
-      "text": "做决定时，我会认真考虑它对相关人的情绪和关系影响。"
+      "text": "做决定时，我会认真考虑它对相关人的感受和关系影响。",
+      "weight": 1,
+      "scenario_tag": "conflict_decision",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 23,
       "dimension": "TF",
       "direction": "T",
-      "text": "指出问题时，我认为准确比委婉更重要。"
+      "text": "指出问题时，我认为准确比委婉更重要。",
+      "weight": 1,
+      "scenario_tag": "fairness_empathy",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 24,
       "dimension": "TF",
       "direction": "F",
-      "text": "如果真话会造成伤害，我会先考虑怎样表达才不破坏关系。"
+      "text": "如果真话可能伤人，我会先思考怎样表达才不破坏关系。",
+      "weight": 1,
+      "scenario_tag": "feedback_harm",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 25,
       "dimension": "TF",
       "direction": "T",
-      "text": "争论中我更关注观点是否成立，而不是气氛是否融洽。"
+      "text": "争论中，我更关注观点是否站得住，而不是气氛是否舒服。",
+      "weight": 1,
+      "scenario_tag": "relationship_logic",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 26,
       "dimension": "TF",
       "direction": "F",
-      "text": "别人情绪变化会明显影响我的判断和行动方式。"
+      "text": "别人情绪变化会明显影响我接下来的判断和表达方式。",
+      "weight": 1,
+      "scenario_tag": "truth_care",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 27,
       "dimension": "TF",
       "direction": "T",
-      "text": "我欣赏能直接面对问题、哪怕听起来有些尖锐的人。"
+      "text": "我欣赏能直接面对问题的人，即使对方说话有点锋利。",
+      "weight": 1,
+      "scenario_tag": "conflict_decision",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 28,
       "dimension": "TF",
       "direction": "F",
-      "text": "我会为了维护团队和谐而调整自己的表达或决定。"
+      "text": "为了维持团队和谐，我会调整自己的表达或决定。",
+      "weight": 1,
+      "scenario_tag": "fairness_empathy",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 29,
       "dimension": "TF",
       "direction": "T",
-      "text": "当规则和个人感受冲突时，我更倾向维护规则。"
+      "text": "当规则和个人感受冲突时，我更倾向先维护规则。",
+      "weight": 1,
+      "scenario_tag": "feedback_harm",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 30,
       "dimension": "TF",
       "direction": "F",
-      "text": "我更容易被“这个决定是否善待了人”说服。"
+      "text": "我更容易被“这个决定是否善待了人”说服。",
+      "weight": 1,
+      "scenario_tag": "relationship_logic",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 31,
       "dimension": "JP",
       "direction": "J",
-      "text": "事情开始前，我喜欢先确定目标、步骤和时间安排。"
+      "text": "事情开始前，我喜欢先确定目标、步骤和时间安排。",
+      "weight": 1,
+      "scenario_tag": "plan_disruption",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 32,
       "dimension": "JP",
       "direction": "P",
-      "text": "我更喜欢保留选择空间，而不是太早把计划定死。"
+      "text": "我更喜欢保留选择空间，不太愿意过早把计划定死。",
+      "weight": 1,
+      "scenario_tag": "deadline_pressure",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 33,
       "dimension": "JP",
       "direction": "J",
-      "text": "待办事项完成前，我很难真正放松。"
+      "text": "待办事项完成前，我很难真正放松。",
+      "weight": 1,
+      "scenario_tag": "choice_closure",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 34,
       "dimension": "JP",
       "direction": "P",
-      "text": "临近截止日期的压力有时反而能激发我的效率。"
+      "text": "临近截止日期的压力有时反而能激发我的效率。",
+      "weight": 1,
+      "scenario_tag": "routine_flex",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 35,
       "dimension": "JP",
       "direction": "J",
-      "text": "清晰的规则和稳定的节奏会让我更安心。"
+      "text": "清晰的规则和稳定的节奏会让我更安心。",
+      "weight": 1,
+      "scenario_tag": "uncertainty_action",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 36,
       "dimension": "JP",
       "direction": "P",
-      "text": "如果计划突然改变，我通常能很快调整状态。"
+      "text": "如果计划突然改变，我通常能较快调整状态。",
+      "weight": 1,
+      "scenario_tag": "plan_disruption",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 37,
       "dimension": "JP",
       "direction": "J",
-      "text": "我倾向于把生活和工作整理得井井有条。"
+      "text": "我倾向把生活和工作整理得井井有条。",
+      "weight": 1,
+      "scenario_tag": "deadline_pressure",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 38,
       "dimension": "JP",
       "direction": "P",
-      "text": "我不喜欢被过细的日程限制住。"
+      "text": "我不喜欢被过细的日程限制住。",
+      "weight": 1,
+      "scenario_tag": "choice_closure",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 39,
       "dimension": "JP",
       "direction": "J",
-      "text": "我会主动把模糊的事情推进到确定状态。"
+      "text": "我会主动把模糊的事情推进到确定状态。",
+      "weight": 1,
+      "scenario_tag": "routine_flex",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 40,
       "dimension": "JP",
       "direction": "P",
-      "text": "探索过程中出现的新机会常常比原计划更吸引我。"
+      "text": "探索过程中出现的新机会，常常比原计划更吸引我。",
+      "weight": 1,
+      "scenario_tag": "uncertainty_action",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 41,
       "dimension": "AT",
       "direction": "A",
-      "text": "面对压力时，我通常相信自己能处理好局面。"
+      "text": "面对压力时，我通常相信自己能把局面处理好。",
+      "weight": 1,
+      "scenario_tag": "criticism_recovery",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 42,
       "dimension": "AT",
       "direction": "T",
-      "text": "即使事情已经完成，我也容易反复担心自己做得不够好。"
+      "text": "即使事情已经完成，我也容易反复担心自己做得不够好。",
+      "weight": 1,
+      "scenario_tag": "self_doubt",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 43,
       "dimension": "AT",
       "direction": "A",
-      "text": "外界评价通常不会轻易动摇我对自己的判断。"
+      "text": "外界评价通常不会轻易动摇我对自己的判断。",
+      "weight": 1,
+      "scenario_tag": "pressure_identity",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 44,
       "dimension": "AT",
       "direction": "T",
-      "text": "别人的一句否定可能会让我想很久。"
+      "text": "别人的一句否定可能会让我想很久。",
+      "weight": 1,
+      "scenario_tag": "mistake_response",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 45,
       "dimension": "AT",
       "direction": "A",
-      "text": "遇到失败后，我通常能较快恢复行动。"
+      "text": "遇到失败后，我通常能较快恢复行动。",
+      "weight": 1,
+      "scenario_tag": "confidence_boundary",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 46,
       "dimension": "AT",
       "direction": "T",
-      "text": "在重要场合前，我经常担心自己会出错。"
+      "text": "重要场合前，我经常担心自己会出错。",
+      "weight": 1,
+      "scenario_tag": "criticism_recovery",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 47,
       "dimension": "AT",
       "direction": "A",
-      "text": "我对自己的选择通常比较笃定。"
+      "text": "我对自己的选择通常比较笃定。",
+      "weight": 1,
+      "scenario_tag": "self_doubt",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 48,
       "dimension": "AT",
       "direction": "T",
-      "text": "我会频繁比较自己和他人的表现。"
+      "text": "我会频繁比较自己和他人的表现。",
+      "weight": 1,
+      "scenario_tag": "pressure_identity",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 49,
       "dimension": "AT",
       "direction": "A",
-      "text": "即使结果不完美，我也能接受“已经足够好”。"
+      "text": "即使结果不完美，我也能接受“已经足够好”。",
+      "weight": 1,
+      "scenario_tag": "mistake_response",
+      "source": "persona_reflection_v2"
     },
     {
       "id": 50,
       "dimension": "AT",
       "direction": "T",
-      "text": "我对未来的不确定性比较敏感，容易焦虑。"
+      "text": "我对未来的不确定性比较敏感，容易焦虑。",
+      "weight": 1,
+      "scenario_tag": "confidence_boundary",
+      "source": "persona_reflection_v2"
     }
   ],
   "open_ended_pool": [
     {
-      "id": "probe_EI_1",
-      "text": "上一次你在社交中明明表现得很自然，但回家后突然觉得累，是因为什么？如果完全不用顾虑别人，你当时会怎么安排自己？",
-      "hint": "写发生了什么、你当时的身体/情绪反应、最后你选择继续还是抽离。",
+      "id": "ei_recovery_01",
+      "text": "一次社交结束后，你明明表现得很自然，回到家却突然觉得累。那种累更像身体透支、情绪空掉，还是还在回放别人说过的话？",
+      "hint": "写一个具体场景：你在哪里、和谁、回来后最想做什么。",
       "tags": [
-        "probe_EI"
+        "probe_EI",
+        "dim_EI",
+        "narrative"
       ]
     },
     {
-      "id": "probe_EI_2",
-      "text": "想象你进入一个全是陌生人的房间，现场有一个你很感兴趣的话题。你会先观察、找熟人，还是直接加入？为什么？",
-      "hint": "不要只写“看情况”，试着描述一个真实类似场景。",
+      "id": "ei_entry_02",
+      "text": "进入一个全是陌生人的场合时，如果现场有你感兴趣的话题，你通常会先观察多久？什么信号会让你决定加入？",
+      "hint": "不要只写内向或外向，写你真正开始说话前会观察什么。",
       "tags": [
-        "probe_EI"
+        "probe_EI",
+        "dim_EI"
       ]
     },
     {
-      "id": "probe_SN_1",
-      "text": "最近有没有一次你凭直觉觉得“不对劲”，但手上证据不足？你最后相信直觉还是继续找事实？结果如何？",
-      "hint": "这题主要看你如何在事实和可能性之间切换。",
+      "id": "ei_boundary_03",
+      "text": "你有没有一次明明想一个人待着，却因为不想扫兴继续留在现场？后来你怎么判断这是不是值得？",
+      "hint": "写你当时的顾虑、身体感受，以及最后有没有后悔。",
       "tags": [
-        "probe_SN"
+        "probe_EI",
+        "dim_EI",
+        "emotion_story"
       ]
     },
     {
-      "id": "probe_SN_2",
-      "text": "如果一个方案听起来很有想象力，但细节暂时不完整；另一个方案很稳但没有新意，你会先支持哪一个？请举例。",
-      "hint": "写你会问哪些问题，以及什么信息会改变你的选择。",
+      "id": "ei_group_04",
+      "text": "当一群人讨论得很热烈，而你有一个不同想法时，你更常直接插入，还是等到被问起？为什么？",
+      "hint": "写一次会议、饭局、课堂或群聊里的真实反应。",
       "tags": [
-        "probe_SN"
+        "probe_EI",
+        "dim_EI"
       ]
     },
     {
-      "id": "probe_TF_1",
-      "text": "上一次“说真话会伤人，不说又不诚实”的场景里，你最后怎么做？你更后悔伤害关系，还是更后悔没有说清楚？",
-      "hint": "这类冲突比抽象自评更能看出决策方式。",
+      "id": "ei_closeness_05",
+      "text": "你什么时候会觉得“和人连接”是在充电，什么时候又会觉得它在消耗你？这两种场景差在哪里？",
+      "hint": "分别举一个让你靠近人的场景和一个想退开的场景。",
       "tags": [
-        "probe_TF"
+        "probe_EI",
+        "dim_EI"
       ]
     },
     {
-      "id": "probe_TF_2",
+      "id": "ei_silence_06",
+      "text": "有没有一次你在场却几乎没说话，但你其实很投入？别人当时可能误解了你什么？",
+      "hint": "写你没开口的原因，以及你心里真正发生了什么。",
+      "tags": [
+        "probe_EI",
+        "dim_EI"
+      ]
+    },
+    {
+      "id": "ei_initiate_07",
+      "text": "如果一个关系需要你主动维持，比如约见面、发消息、开话题，你通常会自然去做，还是会觉得这需要额外用力？",
+      "hint": "写你最常主动的关系类型，以及最容易拖延的关系类型。",
+      "tags": [
+        "probe_EI",
+        "dim_EI"
+      ]
+    },
+    {
+      "id": "ei_after_conflict_08",
+      "text": "和别人发生小摩擦后，你更想马上谈清楚，还是先独处把情绪整理好？如果对方立刻追问，你会怎样？",
+      "hint": "写一次你真实处理冲突后续的方式。",
+      "tags": [
+        "probe_EI",
+        "dim_EI",
+        "mixed"
+      ]
+    },
+    {
+      "id": "sn_hunch_01",
+      "text": "最近有没有一次你说不清证据，但就是觉得“哪里不对”？你最后相信了直觉，还是继续找事实？结果如何？",
+      "hint": "写那个“不对劲”的信号来自哪里：细节、气氛、经验，还是联想。",
+      "tags": [
+        "probe_SN",
+        "dim_SN",
+        "narrative"
+      ]
+    },
+    {
+      "id": "sn_detail_02",
+      "text": "当一个计划很有想象力但细节不完整，另一个计划稳妥但没新意，你更愿意先推进哪一个？为什么？",
+      "hint": "写你会先问哪些问题，或者先补哪些信息。",
+      "tags": [
+        "probe_SN",
+        "dim_SN"
+      ]
+    },
+    {
+      "id": "sn_learning_03",
+      "text": "学习新东西时，你更容易先抓整体框架，还是先把步骤和例子弄清楚？哪种方式会让你更安心？",
+      "hint": "用一次学习、工作交接或看教程的经历回答。",
+      "tags": [
+        "probe_SN",
+        "dim_SN"
+      ]
+    },
+    {
+      "id": "sn_memory_04",
+      "text": "回忆一件重要经历时，你脑中先出现的是具体画面和细节，还是这件事背后的意义和走向？",
+      "hint": "写一个你记得很深的场景，描述你最先想起的部分。",
+      "tags": [
+        "probe_SN",
+        "dim_SN"
+      ]
+    },
+    {
+      "id": "sn_future_05",
+      "text": "别人提出一个远期设想时，你通常会先兴奋于可能性，还是先担心它怎么落地？这种反应帮过你，也限制过你吗？",
+      "hint": "写一次你支持或质疑一个新想法的经历。",
+      "tags": [
+        "probe_SN",
+        "dim_SN"
+      ]
+    },
+    {
+      "id": "sn_evidence_06",
+      "text": "如果你和一个人的判断相反，而对方拿不出证据，只说“我感觉会这样”，你会怎么回应？",
+      "hint": "写你会追问什么，或者在什么情况下愿意相信。",
+      "tags": [
+        "probe_SN",
+        "dim_SN"
+      ]
+    },
+    {
+      "id": "sn_change_07",
+      "text": "面对一套已经运行很久的规则，你更常先理解它为什么存在，还是先想有没有更好的可能？",
+      "hint": "写一次你想改流程、改习惯或改规则的场景。",
+      "tags": [
+        "probe_SN",
+        "dim_SN"
+      ]
+    },
+    {
+      "id": "sn_overlook_08",
+      "text": "你有没有因为太关注方向或意义，忽略了一个实际细节而出问题？那次之后你怎么调整？",
+      "hint": "写具体细节，比如时间、预算、沟通对象、执行步骤。",
+      "tags": [
+        "probe_SN",
+        "dim_SN",
+        "mixed"
+      ]
+    },
+    {
+      "id": "tf_truth_01",
+      "text": "如果必须在“说出真相但伤害对方”和“说个善意的谎言让对方开心”之间选，你更倾向于哪个？为什么？",
+      "hint": "写一个你真的遇到过或很可能遇到的关系场景。",
+      "tags": [
+        "probe_TF",
+        "dim_TF",
+        "mixed"
+      ]
+    },
+    {
+      "id": "tf_feedback_02",
+      "text": "你需要给一个朋友很负面的反馈，但你知道对方最近状态很差。你会怎么说？哪些话你会忍住不说？",
+      "hint": "写你会优先保护事实、关系、对方情绪，还是长期后果。",
+      "tags": [
+        "probe_TF",
+        "dim_TF",
+        "emotion_story"
+      ]
+    },
+    {
+      "id": "tf_team_03",
       "text": "团队里有人能力不够但态度很好，另一个人能力很强但总让大家不舒服。你更愿意和谁合作，为什么？",
-      "hint": "写你会如何权衡结果、关系和公平。",
+      "hint": "写你会如何权衡效率、公平、氛围和长期成本。",
       "tags": [
-        "probe_TF"
+        "probe_TF",
+        "dim_TF"
       ]
     },
     {
-      "id": "probe_JP_1",
-      "text": "如果你精心安排的一天被临时打乱，你第一反应通常是什么？你会立刻重排计划，还是顺势看看会发生什么？",
-      "hint": "请描述一个真实例子，而不是理想中的自己。",
+      "id": "tf_argument_04",
+      "text": "争论中你发现自己逻辑上占优，但对方明显受伤了。你会继续把话说透，还是先停下来照顾关系？",
+      "hint": "写你最真实的第一反应，以及事后是否会修正。",
       "tags": [
-        "probe_JP"
+        "probe_TF",
+        "dim_TF"
       ]
     },
     {
-      "id": "probe_JP_2",
-      "text": "有一件你一直拖着没开始的事，它卡住的真正原因是什么：缺计划、缺动力、怕承诺，还是还想等更好的机会？",
-      "hint": "这题不是问自律，而是问你如何面对开放状态。",
+      "id": "tf_rule_05",
+      "text": "如果规则本身公平，但执行后会让某个具体的人很难受，你会倾向于维护规则还是为这个人破例？",
+      "hint": "写你认为“破例”什么时候合理，什么时候危险。",
       "tags": [
-        "probe_JP"
+        "probe_TF",
+        "dim_TF"
       ]
     },
     {
-      "id": "probe_AT_1",
-      "text": "最近一次你因为别人评价而动摇，是哪句话？你当时如何解释这句话，后来又如何恢复？",
-      "hint": "A/T 更关注压力下的自我信任和情绪波动。",
+      "id": "tf_decision_06",
+      "text": "做重大决定时，你更害怕“判断不够理性”，还是更害怕“忽略了自己或别人的感受”？为什么？",
+      "hint": "写一次你在理性和感受之间摇摆的选择。",
       "tags": [
-        "probe_AT"
+        "probe_TF",
+        "dim_TF",
+        "narrative"
       ]
     },
     {
-      "id": "probe_AT_2",
-      "text": "当一件重要事情结果不理想时，你更容易想“下次调整就好”，还是“是不是我不够好”？请写一次具体经历。",
-      "hint": "描述你脑子里最先冒出来的那句话。",
+      "id": "tf_comfort_07",
+      "text": "朋友向你倾诉痛苦时，你第一反应更像是帮他分析解决办法，还是先让他感觉被理解？",
+      "hint": "写你通常会说出的第一句话。",
       "tags": [
-        "probe_AT"
+        "probe_TF",
+        "dim_TF"
       ]
     },
     {
-      "id": "depth_values_1",
-      "text": "如果有人公开质疑你最看重的一项价值观，你会怎么回应？你会更想说服对方、理解对方，还是结束讨论？",
-      "hint": "争议场景能看出你的能量、决策和压力反应。",
+      "id": "tf_self_08",
+      "text": "你有没有一次为了让别人舒服，答应了自己其实不想答应的事？后来你怎么看那个选择？",
+      "hint": "写你当时怕失去什么，以及后来有没有补救。",
       "tags": [
+        "probe_TF",
+        "dim_TF",
+        "emotion_story"
+      ]
+    },
+    {
+      "id": "jp_disrupt_01",
+      "text": "如果你安排好的一天被临时打乱，你第一反应通常是什么？你会马上重排，还是先看看变化会带来什么？",
+      "hint": "写一次计划被打断的真实经历。",
+      "tags": [
+        "probe_JP",
+        "dim_JP"
+      ]
+    },
+    {
+      "id": "jp_deadline_02",
+      "text": "面对一个重要截止日期，你更常提前锁定方案，还是保留弹性到最后一刻？这种方式带来过什么代价？",
+      "hint": "写一次赶 deadline 或准备考试/项目的经历。",
+      "tags": [
+        "probe_JP",
+        "dim_JP"
+      ]
+    },
+    {
+      "id": "jp_options_03",
+      "text": "当选择很多、每个都还不错时，你更想尽快定下来，还是继续打开更多可能？为什么？",
+      "hint": "写你如何处理“都可以但都不完美”的选择。",
+      "tags": [
+        "probe_JP",
+        "dim_JP"
+      ]
+    },
+    {
+      "id": "jp_routine_04",
+      "text": "你最舒服的一周是什么样的：大致可预期，还是每天都有新变化？如果两者失衡，你会怎么反应？",
+      "hint": "写你对固定节奏和临时变化的真实需要。",
+      "tags": [
+        "probe_JP",
+        "dim_JP"
+      ]
+    },
+    {
+      "id": "jp_start_05",
+      "text": "有一件你一直想做却没开始的事，它真正卡住的是缺计划、缺动力、怕承诺，还是还想等更好的时机？",
+      "hint": "写那件事是什么，以及你给自己的理由。",
+      "tags": [
+        "probe_JP",
+        "dim_JP",
+        "narrative"
+      ]
+    },
+    {
+      "id": "jp_commit_06",
+      "text": "别人要求你现在给一个明确答复，但你还想再看看。你会怎样回应？",
+      "hint": "写你通常怎么处理承诺、模糊和临时变化。",
+      "tags": [
+        "probe_JP",
+        "dim_JP"
+      ]
+    },
+    {
+      "id": "jp_mess_07",
+      "text": "生活或工作空间变得混乱时，你会明显烦躁，还是只要事情能推进就可以接受？",
+      "hint": "写你对秩序的忍耐边界在哪里。",
+      "tags": [
+        "probe_JP",
+        "dim_JP"
+      ]
+    },
+    {
+      "id": "jp_spontaneous_08",
+      "text": "如果有人突然邀请你参加一个听起来不错但完全没准备的活动，你会兴奋、犹豫，还是本能想拒绝？",
+      "hint": "写你会考虑哪些风险或机会。",
+      "tags": [
+        "probe_JP",
+        "dim_JP",
         "mixed"
       ]
     },
     {
-      "id": "depth_conflict_1",
-      "text": "你有没有一次在关系中选择了沉默，但心里其实很不服？如果重来，你会继续沉默还是正面冲突？",
-      "hint": "写你沉默/冲突背后的顾虑。",
+      "id": "at_criticism_01",
+      "text": "最近一次别人一句评价让你动摇，是哪句话？你当时如何解释它，后来又如何恢复？",
+      "hint": "写那句话为什么戳中你，而不是只写你难过。",
       "tags": [
+        "probe_AT",
+        "dim_AT",
+        "emotion_story"
+      ]
+    },
+    {
+      "id": "at_mistake_02",
+      "text": "重要事情出了错时，你更容易想“下次调整就好”，还是“是不是我不够好”？请写一次具体经历。",
+      "hint": "写你第一反应、后续行动，以及恢复用了多久。",
+      "tags": [
+        "probe_AT",
+        "dim_AT"
+      ]
+    },
+    {
+      "id": "at_compare_03",
+      "text": "看到同龄人或同事进展很快时，你更容易被激励，还是开始怀疑自己？你通常怎么处理这种比较？",
+      "hint": "写一个最近的比较场景。",
+      "tags": [
+        "probe_AT",
+        "dim_AT"
+      ]
+    },
+    {
+      "id": "at_praise_04",
+      "text": "别人夸你时，你会自然接受，还是会立刻想“其实没那么好”？这种反应从哪里来？",
+      "hint": "写你听到夸奖时身体和脑子里的第一反应。",
+      "tags": [
+        "probe_AT",
+        "dim_AT"
+      ]
+    },
+    {
+      "id": "at_confidence_05",
+      "text": "你在什么场景里会突然变得很笃定？那种笃定来自准备充分、经验、他人认可，还是内心价值？",
+      "hint": "写你觉得自己最稳的一次。",
+      "tags": [
+        "probe_AT",
+        "dim_AT"
+      ]
+    },
+    {
+      "id": "at_pressure_06",
+      "text": "压力很大时，你更像进入“我能处理”的模式，还是反复检查自己会不会失败？",
+      "hint": "写压力下你最典型的自我对话。",
+      "tags": [
+        "probe_AT",
+        "dim_AT"
+      ]
+    },
+    {
+      "id": "at_identity_07",
+      "text": "如果别人误解你的动机，你会急着解释清楚，还是觉得“懂的人自然会懂”？为什么？",
+      "hint": "写你对被理解、被认可的真实需要。",
+      "tags": [
+        "probe_AT",
+        "dim_AT",
         "mixed"
       ]
     },
     {
-      "id": "shadow_E_1",
-      "text": "你最近一次感到真正孤独是什么时候？当时你在想什么、做了什么？",
-      "hint": "就算你习惯与人相处，也总有安静下来的时刻吧",
+      "id": "at_rest_08",
+      "text": "你允许自己休息时，内心会不会有负罪感？什么情况下你能真正安心停下来？",
+      "hint": "写你对“我已经足够好了”的感受。",
       "tags": [
-        "shadow_E"
+        "probe_AT",
+        "dim_AT",
+        "emotion_story"
       ]
     },
     {
-      "id": "shadow_E_2",
-      "text": "有没有哪次社交活动让你觉得'还不如不去'？是什么让你有了这种感觉？",
-      "hint": "比如被迫营业、尬聊、或者结束后反而更累",
+      "id": "mixed_values_01",
+      "text": "如果有人公开质疑你最看重的一项价值观，你会更想说服对方、理解对方，还是结束讨论？为什么？",
+      "hint": "写你会如何判断这场讨论还值不值得继续。",
       "tags": [
-        "shadow_E"
+        "mixed",
+        "emotion_story",
+        "dim_TF",
+        "dim_EI"
       ]
     },
     {
-      "id": "shadow_I_1",
-      "text": "如果有一天你变得完全不内向，可以和任何人轻松愉快地聊天。你觉得这样的你会是什么样子？",
-      "hint": "你羡慕外向者的哪些方面？或者你觉得他们有什么烦恼是你没有的？",
+      "id": "mixed_conflict_02",
+      "text": "你有没有一次在关系中选择沉默，但心里其实很不服？如果重来，你会继续沉默还是正面表达？",
+      "hint": "写你当时为什么忍住，以及现在怎么看。",
       "tags": [
-        "shadow_I"
+        "mixed",
+        "emotion_story",
+        "dim_EI",
+        "dim_TF"
       ]
     },
     {
-      "id": "shadow_I_2",
-      "text": "有没有哪次你很想说出自己的想法，但最终选择了沉默？如果再给你一次机会，你会说出来吗？",
-      "hint": "是什么让你选择了沉默？怕冲突、觉得没必要、还是没来得及？",
+      "id": "mixed_future_03",
+      "text": "想象一年后的你因为今天的一个决定生活发生变化。你希望那个决定更像一次稳妥选择，还是一次冒险？",
+      "hint": "写你期待的变化，以及你害怕的代价。",
       "tags": [
-        "shadow_I"
+        "mixed",
+        "dim_SN",
+        "dim_JP"
       ]
     },
     {
-      "id": "shadow_S_1",
-      "text": "你有没有过那种'说不清为什么，但就是感觉不对'的经历？后来事实证明你的直觉对吗？",
-      "hint": "哪怕没有任何依据的第六感",
+      "id": "mixed_control_04",
+      "text": "当你发现一件事已经不受控制时，你更想重新掌控局面，还是先接受变化再行动？",
+      "hint": "写一次失控感明显的经历。",
       "tags": [
-        "shadow_S"
+        "mixed",
+        "dim_JP",
+        "dim_AT"
       ]
     },
     {
-      "id": "shadow_S_2",
-      "text": "有人说'信任是一种选择，不是一种证据'。你怎么看待这句话？",
-      "hint": "你更依赖证据还是信赖感？",
+      "id": "mixed_help_05",
+      "text": "当你状态不好时，你更希望别人给你空间、给你建议、陪你说话，还是直接帮你处理问题？",
+      "hint": "写你真正需要的帮助，以及你通常说出口的请求。",
       "tags": [
-        "shadow_S"
+        "mixed",
+        "emotion_story",
+        "dim_EI",
+        "dim_TF",
+        "dim_AT"
       ]
     },
     {
-      "id": "shadow_N_1",
-      "text": "你最近一次因为忽略实际细节而出问题是什么时候？比如看错时间、算错预算、忘了确认。",
-      "hint": "小事也行，不一定非得是大事",
+      "id": "mixed_identity_06",
+      "text": "有没有一种别人眼中的你，和你自己感受到的你差很多？这种差距让你困扰还是反而保护了你？",
+      "hint": "写别人怎么看你，你自己又如何解释。",
       "tags": [
-        "shadow_N"
+        "mixed",
+        "narrative",
+        "dim_AT"
       ]
     },
     {
-      "id": "shadow_N_2",
-      "text": "如果让你完全活在自己理想的世界里，代价是不能和现实中的任何人交流，你愿意吗？为什么？",
-      "hint": "理想世界可以有你想要的一切，只是你出不来",
+      "id": "mixed_energy_07",
+      "text": "你什么时候会突然很有行动力？是因为目标清楚、情绪被点燃、有人期待，还是现场机会出现？",
+      "hint": "写一次你从拖延变成行动的瞬间。",
       "tags": [
-        "shadow_N"
+        "mixed",
+        "dim_JP",
+        "dim_EI",
+        "dim_AT"
       ]
     },
     {
-      "id": "shadow_T_1",
-      "text": "你做过最不理性但绝不后悔的决定是什么？",
-      "hint": "那个你明知道不合理、但再来一次还是会做的事",
+      "id": "mixed_regret_08",
+      "text": "回想一个你现在仍会反复想起的决定，你更后悔没有更理性，还是没有更诚实地面对自己的感受？",
+      "hint": "写那个决定留下的情绪尾巴。",
       "tags": [
-        "shadow_T"
+        "mixed",
+        "emotion_story",
+        "dim_TF",
+        "dim_AT"
       ]
     },
     {
-      "id": "shadow_T_2",
-      "text": "你有没有因为'说话太直'而伤害过别人？你后来是怎么处理的？",
-      "hint": "你觉得真诚比委婉重要吗？还是有时会反思？",
+      "id": "mixed_work_09",
+      "text": "在合作中，你更怕别人觉得你不够可靠，还是怕自己被太多规则困住？为什么？",
+      "hint": "写一次团队合作里你最在意的评价。",
       "tags": [
-        "shadow_T"
+        "mixed",
+        "dim_JP",
+        "dim_AT",
+        "dim_EI"
       ]
     },
     {
-      "id": "shadow_F_1",
-      "text": "你有没有为了照顾别人的感受而委屈过自己？重来一次你会怎么选？",
-      "hint": "别人可能都不知道你做了让步的那种",
+      "id": "mixed_close_10",
+      "text": "当一段关系变得很亲近时，你更容易放松，还是更容易担心自己会让对方失望？",
+      "hint": "写亲近关系里你最常出现的保护动作。",
       "tags": [
-        "shadow_F"
-      ]
-    },
-    {
-      "id": "shadow_F_2",
-      "text": "如果必须在'说出真相但伤害Ta'和'说个善意的谎言让Ta开心'之间选，你更倾向于哪个？为什么？",
-      "hint": "有没有例外情况？",
-      "tags": [
-        "shadow_F"
-      ]
-    },
-    {
-      "id": "shadow_J_1",
-      "text": "上一次你对自己说'算了，不管了'是什么时候？当时发生了什么？",
-      "hint": "放弃掌控的那一刻，是解脱还是不安？",
-      "tags": [
-        "shadow_J"
-      ]
-    },
-    {
-      "id": "shadow_J_2",
-      "text": "如果明天开始你所有的计划全部作废，你必须随心所欲地生活一周。你第一件事想做什么？",
-      "hint": "完全没人管你、也不用管任何事的一周",
-      "tags": [
-        "shadow_J"
-      ]
-    },
-    {
-      "id": "shadow_P_1",
-      "text": "有没有一件你特别想做但一直没开始的事？你觉得缺的是什么？",
-      "hint": "时间、勇气、资源、还是就差那一个开始的契机？",
-      "tags": [
-        "shadow_P"
-      ]
-    },
-    {
-      "id": "shadow_P_2",
-      "text": "迄今为止你做得最久的坚持是什么？是什么让你撑了下来？",
-      "hint": "不一定是什么了不起的事，坚持本身就很了不起",
-      "tags": [
-        "shadow_P"
-      ]
-    },
-    {
-      "id": "mixed_1",
-      "text": "当你面临一个重大决定时，你会列出清单分析利弊，还是更多地听从内心的声音？请举一个具体的例子。",
-      "hint": "有没有过你用了其中一种方式，但另一种才是更好的选择的情况？",
-      "tags": [
-        "mixed"
-      ]
-    },
-    {
-      "id": "mixed_2",
-      "text": "在一个满是陌生人的场合，你通常是先观察再行动，还是先融入再调整？哪一种让你更自在？",
-      "hint": "比如第一天到新公司、新班级、或者一个聚会",
-      "tags": [
-        "mixed"
-      ]
-    },
-    {
-      "id": "mixed_3",
-      "text": "你有没有被人严重误解过？你觉得是对方理解错了，还是你没表达清楚？你在乎吗？",
-      "hint": "有没有试图解释？还是觉得没必要？",
-      "tags": [
-        "mixed"
-      ]
-    },
-    {
-      "id": "mixed_4",
-      "text": "想象一下，一年后的你因为今天做出的一个决定而生活发生了巨大变化。你希望那个决定是什么？",
-      "hint": "什么事是你现在就有能力做、但一直在犹豫的？",
-      "tags": [
-        "mixed"
+        "mixed",
+        "emotion_story",
+        "dim_EI",
+        "dim_AT"
       ]
     }
   ],
@@ -598,34 +974,44 @@
   },
   "likert_labels": [
     {
-      "value": -2,
+      "value": -3,
       "label": "非常不同意",
       "short": "非常不同"
     },
     {
-      "value": -1,
+      "value": -2,
       "label": "不同意",
-      "short": "不同"
+      "short": "不同意"
+    },
+    {
+      "value": -1,
+      "label": "有点不同意",
+      "short": "略不同"
     },
     {
       "value": 0,
-      "label": "中立",
+      "label": "中立 / 不确定",
       "short": "中立"
     },
     {
       "value": 1,
+      "label": "有点同意",
+      "short": "略同意"
+    },
+    {
+      "value": 2,
       "label": "同意",
       "short": "同意"
     },
     {
-      "value": 2,
+      "value": 3,
       "label": "非常同意",
       "short": "非常同"
     }
   ],
   "type_profiles": {
     "INTJ": {
-      "nickname": "建筑师型",
+      "nickname": "建筑师",
       "description": "富有想象力和战略性的思想家，一切皆在计划之中。",
       "strengths": [
         "战略性思维强",
@@ -646,7 +1032,7 @@
       ]
     },
     "INTP": {
-      "nickname": "逻辑学家型",
+      "nickname": "逻辑学家",
       "description": "具有创造力的逻辑学家，对知识有着永不满足的渴望。",
       "strengths": [
         "逻辑分析能力强",
@@ -667,7 +1053,7 @@
       ]
     },
     "ENTJ": {
-      "nickname": "指挥官型",
+      "nickname": "指挥官",
       "description": "大胆、富有想象力且意志强大的领导者，天生就是掌舵人。",
       "strengths": [
         "天生的领导者",
@@ -688,7 +1074,7 @@
       ]
     },
     "ENTP": {
-      "nickname": "辩论家型",
+      "nickname": "辩论家",
       "description": "聪明好奇的思想者，无法抗拒智识挑战的乐趣。",
       "strengths": [
         "思维敏捷",
@@ -710,7 +1096,7 @@
       ]
     },
     "INFJ": {
-      "nickname": "提倡者型",
+      "nickname": "提倡者",
       "description": "安静而神秘，鼓舞人心且不知疲倦的理想主义者。",
       "strengths": [
         "洞察力强",
@@ -731,7 +1117,7 @@
       ]
     },
     "INFP": {
-      "nickname": "调停者型",
+      "nickname": "调停者",
       "description": "诗意、善良的利他主义者，总是准备好帮助他人。",
       "strengths": [
         "富有同情心",
@@ -752,7 +1138,7 @@
       ]
     },
     "ENFJ": {
-      "nickname": "主人公型",
+      "nickname": "主人公",
       "description": "富有魅力且鼓舞人心的领导者，能照亮整片天空。",
       "strengths": [
         "鼓舞人心",
@@ -773,7 +1159,7 @@
       ]
     },
     "ENFP": {
-      "nickname": "活动家型",
+      "nickname": "活动家",
       "description": "热情、有创造力、爱社交的自由精神，总能发现可能性。",
       "strengths": [
         "热情洋溢",
@@ -794,7 +1180,7 @@
       ]
     },
     "ISTJ": {
-      "nickname": "物流师型",
+      "nickname": "物流师",
       "description": "实际且注重事实的个体，值得信赖和可靠的基石。",
       "strengths": [
         "可靠负责",
@@ -815,7 +1201,7 @@
       ]
     },
     "ISFJ": {
-      "nickname": "守卫者型",
+      "nickname": "守卫者",
       "description": "专注且温暖的保护者，随时准备守护所爱之人。",
       "strengths": [
         "细心周到",
@@ -836,7 +1222,7 @@
       ]
     },
     "ESTJ": {
-      "nickname": "总经理型",
+      "nickname": "总经理",
       "description": "出色的管理者，让事务和人员有条不紊地运转。",
       "strengths": [
         "组织能力强",
@@ -857,7 +1243,7 @@
       ]
     },
     "ESFJ": {
-      "nickname": "执政官型",
+      "nickname": "执政官",
       "description": "富有同情心且善于社交的管家，让社区凝聚在一起。",
       "strengths": [
         "热情友善",
@@ -878,7 +1264,7 @@
       ]
     },
     "ISTP": {
-      "nickname": "鉴赏家型",
+      "nickname": "鉴赏家",
       "description": "大胆而实际的实验者，擅长亲自动手解决问题。",
       "strengths": [
         "动手能力强",
@@ -899,7 +1285,7 @@
       ]
     },
     "ISFP": {
-      "nickname": "探险家型",
+      "nickname": "探险家",
       "description": "灵活且迷人的艺术家，总在用行动探索世界。",
       "strengths": [
         "审美感强",
@@ -920,7 +1306,7 @@
       ]
     },
     "ESTP": {
-      "nickname": "企业家型",
+      "nickname": "企业家",
       "description": "聪明、精力充沛的感知者，活在当下的实干家。",
       "strengths": [
         "行动力强",
@@ -941,7 +1327,7 @@
       ]
     },
     "ESFP": {
-      "nickname": "表演者型",
+      "nickname": "表演者",
       "description": "自发、热情、精力充沛的娱乐者，让生活充满乐趣。",
       "strengths": [
         "开朗活泼",

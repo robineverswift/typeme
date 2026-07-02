@@ -19,5 +19,21 @@
       "ai_api_key": "<your-kimi-api-key>",
       "ai_auth_header": "Authorization"
     }
+  },
+  "studio_local_config_example": {
+    "supabase_url": "https://<project>.supabase.co",
+    "supabase_anon_key": "<supabase-anon-key>",
+    "supabase_service_role_key": "<supabase-service-role-key>",
+    "studio_admin_emails": ["admin@example.com"],
+    "studio_cookie_secret": "<long-random-string>",
+    "note": "These keys may be used in ignored mbti/config.json for local development only. Do not commit real values."
+  },
+  "studio_env_example": {
+    "SUPABASE_URL": "https://<project>.supabase.co",
+    "SUPABASE_ANON_KEY": "<supabase-anon-key>",
+    "SUPABASE_SERVICE_ROLE_KEY": "<supabase-service-role-key>",
+    "STUDIO_ADMIN_EMAILS": "admin@example.com,second-admin@example.com",
+    "STUDIO_COOKIE_SECRET": "<long-random-string>",
+    "note": "Set these as environment variables. Do not put real keys in this file."
   }
 }

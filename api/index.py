@@ -10,6 +10,7 @@ app = Flask(__name__)
 HERE = Path(__file__).parent.parent
 DATA_PATH = HERE / "questions.json"
 TEMPLATES = Path(__file__).parent / "templates"
+PUBLIC = HERE / "public"
 
 # ── Config from env ──
 AI_API_KEY = os.environ.get("AI_API_KEY", os.environ.get("DEEPSEEK_API_KEY", "")).strip()
@@ -18,7 +19,14 @@ AI_MODEL = os.environ.get("AI_MODEL", "deepseek-chat")
 AI_AUTH_HEADER = os.environ.get("AI_AUTH_HEADER", "Authorization")
 
 DIM_ORDER = ["EI", "SN", "TF", "JP", "AT"]
-FIRST_POLES = {"EI": "E", "SN": "S", "TF": "T", "JP": "J", "AT": "A"}
+DIM_POLES = {
+    "EI": ("E", "I"),
+    "SN": ("S", "N"),
+    "TF": ("T", "F"),
+    "JP": ("J", "P"),
+    "AT": ("A", "T"),
+}
+FIRST_POLES = {dim: poles[0] for dim, poles in DIM_POLES.items()}
 
 _NONSENSE_RE = re.compile(
     r'^(.)\1{2,}$|^[a-zA-Z]{1,3}$|^(.){1,2}$|'
@@ -39,14 +47,17 @@ def score_traditional(answers):
     for dim in DIM_ORDER:
         dim_qs = [q for q in questions_data.get("traditional", []) if q["dimension"] == dim]
         net = 0
-        first = FIRST_POLES[dim]
-        second = {"EI":"I","SN":"N","TF":"F","JP":"P","AT":"T"}[dim]
+        first, second = DIM_POLES[dim]
         for q in dim_qs:
             match = [a for a in answers if a["id"] == q["id"]]
             if not match: continue
-            val = match[0]["value"]
+            try:
+                val = int(match[0]["value"])
+            except (TypeError, ValueError):
+                val = 0
+            val = max(-3, min(3, val))
             net += val if q["direction"] == first else -val
-        possible_max = len(dim_qs) * 2
+        possible_max = len(dim_qs) * 3
         dominant = first if net >= 0 else second
         other = second if net >= 0 else first
         intensity = min(abs(net) / possible_max * 100, 100) if possible_max else 50
@@ -60,7 +71,99 @@ def score_traditional(answers):
         }
     type_str = "".join(net_scores[d]["dominant"] for d in DIM_ORDER[:4])
     identity = net_scores["AT"]["dominant"]
-    return {"type": type_str, "identity": identity, "details": net_scores}
+    confidence = build_type_confidence(net_scores)
+    candidates = build_candidate_types(net_scores)
+    return {"type": type_str, "identity": identity, "details": net_scores, "confidence": confidence, "candidate_types": candidates}
+
+
+def build_type_confidence(net_scores):
+    uncertain = []
+    pct_values = []
+    for dim in DIM_ORDER:
+        d = net_scores.get(dim, {})
+        dom_pct = int(d.get("dom_pct", 50))
+        pct_values.append(dom_pct)
+        closeness = abs(dom_pct - 50)
+        if dom_pct < 58:
+            label = "low"
+        elif dom_pct < 68:
+            label = "medium"
+        else:
+            label = "high"
+        if label != "high":
+            uncertain.append({
+                "dim": dim,
+                "dominant": d.get("dominant", ""),
+                "other": d.get("other", ""),
+                "dom_pct": dom_pct,
+                "other_pct": d.get("other_pct", 100 - dom_pct),
+                "label": label,
+                "closeness": closeness,
+            })
+    avg = sum(pct_values) / len(pct_values) if pct_values else 50
+    level = "high" if avg >= 72 and not uncertain else ("medium" if avg >= 62 else "low")
+    return {
+        "level": level,
+        "score": round(avg),
+        "uncertain_dimensions": sorted(uncertain, key=lambda item: item["dom_pct"]),
+    }
+
+
+def candidate_confidence(letters, identity, net_scores):
+    values = []
+    for index, dim in enumerate(DIM_ORDER[:4]):
+        d = net_scores.get(dim, {})
+        values.append(int(d.get("dom_pct" if letters[index] == d.get("dominant") else "other_pct", 50)))
+    at = net_scores.get("AT", {})
+    values.append(int(at.get("dom_pct" if identity == at.get("dominant") else "other_pct", 50)))
+    return round(sum(values) / len(values)) if values else 50
+
+
+def build_candidate_types(net_scores):
+    base_letters = [net_scores[d]["dominant"] for d in DIM_ORDER[:4]]
+    base_identity = net_scores["AT"]["dominant"]
+    borderline = []
+    for index, dim in enumerate(DIM_ORDER[:4]):
+        d = net_scores.get(dim, {})
+        dom_pct = int(d.get("dom_pct", 50))
+        if dom_pct < 68:
+            borderline.append((abs(dom_pct - 50), index, dim))
+    borderline.sort(key=lambda item: item[0])
+    identity_borderline = int(net_scores.get("AT", {}).get("dom_pct", 50)) < 68
+    candidates = []
+    seen = set()
+
+    def add_candidate(letters, identity, flipped_dims, reason):
+        type_code = "".join(letters)
+        key = f"{type_code}-{identity}"
+        if key in seen:
+            return
+        seen.add(key)
+        candidates.append({
+            "type": type_code,
+            "identity": identity,
+            "confidence": candidate_confidence(letters, identity, net_scores),
+            "flipped_dimensions": flipped_dims,
+            "reason": reason,
+        })
+
+    add_candidate(base_letters, base_identity, [], "量表最接近")
+    for _, index, dim in borderline[:3]:
+        letters = base_letters[:]
+        letters[index] = net_scores[dim]["other"]
+        add_candidate(letters, base_identity, [dim], f"{dim} 接近中线")
+    if identity_borderline:
+        add_candidate(base_letters, net_scores["AT"]["other"], ["AT"], "A/T 接近中线")
+    if len(borderline) >= 2:
+        letters = base_letters[:]
+        dims = []
+        for _, index, dim in borderline[:2]:
+            letters[index] = net_scores[dim]["other"]
+            dims.append(dim)
+        add_candidate(letters, base_identity, dims, "多个临界维度同时接近")
+    primary = candidates[:1]
+    rest = sorted(candidates[1:], key=lambda item: item.get("confidence", 0), reverse=True)
+    return (primary + rest)[:4]
 
 
 def select_open_ended(details):
@@ -68,45 +171,69 @@ def select_open_ended(details):
     if not pool: return []
     random.shuffle(pool)
     selected, used_ids = [], set()
-    def pick_one(tag, focus_dim=None):
+    def pick_one(tag, focus_dim=None, reason=""):
         for q in pool:
             if tag in q.get("tags", []) and q["id"] not in used_ids:
                 item = dict(q)
                 if focus_dim: item["focus_dimension"] = focus_dim
+                if reason: item["selection_reason"] = reason
                 selected.append(item); used_ids.add(q["id"])
                 return True
         return False
-    uncertainty, clear_dims = [], []
+    uncertainty, stable_dims = [], []
     for dim in DIM_ORDER:
         d = details.get(dim, {})
         dom_pct = int(d.get("dom_pct", 50))
-        strength = d.get("strength", "neutral")
-        dominant = d.get("dominant", "")
-        if strength != "clear" or dom_pct < 68:
-            uncertainty.append((abs(dom_pct - 50), dim))
-        elif dominant:
-            clear_dims.append(f"shadow_{dominant}")
+        closeness = abs(dom_pct - 50)
+        if dom_pct < 68:
+            uncertainty.append((closeness, dim, dom_pct))
+        else:
+            stable_dims.append((closeness, dim, dom_pct))
     uncertainty.sort(key=lambda x: x[0])
-    for _, dim in uncertainty:
-        if len(selected) >= 5: break
-        pick_one(f"probe_{dim}", dim)
-    random.shuffle(clear_dims)
-    for tag in clear_dims:
-        if len(selected) >= 5: break
-        pick_one(tag)
+    for _, dim, dom_pct in uncertainty:
+        if len([q for q in selected if q.get("selection_bucket") == "borderline"]) >= 3:
+            break
+        before = len(selected)
+        pick_one(f"probe_{dim}", dim, f"{dim} 接近中线（{dom_pct}%），优先用现实场景复核")
+        if len(selected) > before:
+            selected[-1]["selection_bucket"] = "borderline"
     if len(selected) < 5:
-        for q in pool:
-            if "mixed" in q.get("tags", []) and q["id"] not in used_ids:
-                selected.append(dict(q)); used_ids.add(q["id"])
-                if len(selected) >= 5: break
+        before = len(selected)
+        pick_one("mixed", reason="跨维度困境题，用来观察多个倾向在同一场景里的取舍")
+        if len(selected) > before:
+            selected[-1]["selection_bucket"] = "mixed"
+    if len(selected) < 5:
+        before = len(selected)
+        pick_one("emotion_story", reason="情绪与自我叙事题，用来补充压力、自责或关系中的真实反应")
+        if len(selected) > before:
+            selected[-1]["selection_bucket"] = "narrative"
+    if len(selected) < 5 and not any(q.get("selection_bucket") == "narrative" for q in selected):
+        before = len(selected)
+        pick_one("narrative", reason="叙事题，用来补充具体经历而不是抽象自评")
+        if len(selected) > before:
+            selected[-1]["selection_bucket"] = "narrative"
+    if len(selected) < 5:
+        stable_dims.sort(key=lambda x: x[0])
+        for _, dim, dom_pct in stable_dims:
+            if len(selected) >= 5:
+                break
+            before = len(selected)
+            pick_one(f"probe_{dim}", dim, f"{dim} 量表较稳定（{dom_pct}%），抽样检查压力场景下是否仍一致")
+            if len(selected) > before:
+                selected[-1]["selection_bucket"] = "stability_check"
     if len(selected) < 5:
         for q in pool:
             if q["id"] not in used_ids:
-                selected.append(dict(q)); used_ids.add(q["id"])
+                item = dict(q)
+                item["selection_reason"] = "补足 5 道开放题"
+                item["selection_bucket"] = "fallback"
+                selected.append(item); used_ids.add(q["id"])
                 if len(selected) >= 5: break
     return [
         {"display_id": f"oe_{i+1}", "id": q["id"], "text": q["text"],
-         "hint": q.get("hint", ""), "focus_dimension": q.get("focus_dimension", "")}
+         "hint": q.get("hint", ""), "focus_dimension": q.get("focus_dimension", ""),
+         "tags": q.get("tags", []), "selection_reason": q.get("selection_reason", ""),
+         "selection_bucket": q.get("selection_bucket", "")}
         for i, q in enumerate(selected[:5])
     ]
 
@@ -448,6 +575,22 @@ def handle_root():
     return f"FE not found: {index_html}", 404
 
 
+@app.route("/typeme-app.css")
+def handle_typeme_css():
+    path = PUBLIC / "typeme-app.css"
+    if path.exists():
+        return path.read_text(encoding="utf-8"), 200, {"Content-Type": "text/css; charset=utf-8"}
+    return "CSS not found", 404
+
+
+@app.route("/typeme-app.js")
+def handle_typeme_js():
+    path = PUBLIC / "typeme-app.js"
+    if path.exists():
+        return path.read_text(encoding="utf-8"), 200, {"Content-Type": "application/javascript; charset=utf-8"}
+    return "JS not found", 404
+
+
 @app.route("/api/questions")
 def handle_questions():
     return jsonify(questions_data)
@@ -471,6 +614,7 @@ def handle_analyze():
         data.get("details", {}),
         data.get("open_answers", []),
     )
+    result["analysis_locale"] = "zh-CN"
     return jsonify(result)
 
 
