@@ -3307,8 +3307,9 @@ body.typeme-ui-active[class*="typeme-theme-"] .scale-choice.vn3{color:color-mix(
   body.typeme-ui-active .persona-mobile-report-nav{
     display:flex;
     gap:7px;
-    width:calc(100vw - 32px);
-    margin:10px auto 12px;
+    width:100%;
+    max-width:100%;
+    margin:10px 0 12px;
     padding:6px;
     border:1px solid var(--theme-accent-line,rgba(36,33,29,.08));
     border-radius:999px;
@@ -3323,7 +3324,7 @@ body.typeme-ui-active[class*="typeme-theme-"] .scale-choice.vn3{color:color-mix(
     display:none;
   }
   body.typeme-ui-active .persona-mobile-report-nav a{
-    flex:0 0 auto;
+    flex:1 0 72px;
     min-width:72px;
     min-height:32px;
     display:flex;

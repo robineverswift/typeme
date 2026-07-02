@@ -29,9 +29,16 @@ DIM_POLES = {
 FIRST_POLES = {dim: poles[0] for dim, poles in DIM_POLES.items()}
 
 _NONSENSE_RE = re.compile(
-    r'^(.)\1{2,}$|^[a-zA-Z]{1,3}$|^(.){1,2}$|'
-    r'^(嗯|哦|啊|哈|是|对|好|行|不|无|有|没|了|的){1,4}$|'
-    r'^(asdf|qwer|test|测试|111|222|aaa|bbb)$', re.IGNORECASE)
+    r"^(.)\1{2,}$|^[a-zA-Z]{1,3}$|^(.){1,2}$|"
+    r"^(嗯|哦|啊|哈|是|对|好|行|不|无|有|没|了|的){1,4}$|"
+    r"^(asdf|qwer|test|测试|111|222|aaa|bbb)$", re.IGNORECASE)
+_OPEN_SIGNAL_RE = re.compile(r"[A-Za-z0-9\u4e00-\u9fff]")
+_OPEN_SCENE_RE = re.compile(
+    r"因为|当时|后来|所以|但是|如果|选择|冲突|压力|例子|具体|场景|关系|决定|后悔|担心|害怕|希望|感觉|认为|自己|"
+    r"because|when|then|later|choice|conflict|pressure|example|specific|relationship|decide|regret|worry|afraid|feel|think|myself",
+    re.IGNORECASE,
+)
+_OPEN_REPEAT_RE = re.compile(r"(.{2,8})\1{2,}", re.IGNORECASE)
 
 questions_data = {}
 try:
@@ -272,13 +279,74 @@ def call_ai(system_prompt, user_prompt, retries=2, temperature=0.3, max_tokens=4
     raise RuntimeError(f"网络错误: {last_error}")
 
 
+def _open_answer_signal(text):
+    raw = str(text or "").strip()
+    compact = re.sub(r"\s+", "", raw).lower()
+    chars = _OPEN_SIGNAL_RE.findall(compact)
+    signal = len(chars)
+    dominance = max((chars.count(char) for char in set(chars)), default=0) / signal if signal else 0
+    max_run = 0
+    run = 0
+    last = ""
+    for char in compact:
+        if char == last:
+            run += 1
+        else:
+            last = char
+            run = 1
+        max_run = max(max_run, run)
+    repeated = bool(_OPEN_REPEAT_RE.search(compact))
+    scene = bool(_OPEN_SCENE_RE.search(raw))
+    punct = bool(re.search(r"[，。！？；,.!?;]", raw))
+    latin_run = bool(re.fullmatch(r"[a-z']{18,}", compact, re.IGNORECASE))
+    score = min(62, round(signal / 180 * 58))
+    if scene: score += 24
+    if punct and signal > 45: score += 8
+    if signal > 90: score += 8
+    if max_run >= 5: score -= 35
+    if repeated: score -= 35
+    if dominance > 0.42 and signal > 12: score -= 30
+    if latin_run and not scene: score -= 24
+    if signal < 24: score = min(score, 24)
+    return {
+        "score": max(0, min(100, score)),
+        "signal": signal,
+        "dominance": dominance,
+        "max_run": max_run,
+        "repeated": repeated,
+        "low_info": signal < 36 or dominance > 0.48 or max_run >= 6 or repeated or (latin_run and not scene),
+    }
+
+
 def is_nonsense(text):
-    if not text or len(text.strip()) < 3: return True
-    t = text.strip()
-    if _NONSENSE_RE.search(t): return True
-    if len(t) > 3 and max(t.count(c) for c in set(t)) / len(t) > 0.6: return True
-    if all(not c.isalnum() for c in t): return True
-    return False
+    raw = str(text or "").strip()
+    if not raw or _NONSENSE_RE.search(raw): return True
+    if all(not c.isalnum() for c in raw): return True
+    signal = _open_answer_signal(raw)
+    return signal["low_info"] or signal["score"] < 25
+
+
+def _review_open_answer_quality(open_answers):
+    reviewed = []
+    for item in open_answers:
+        answer = str((item or {}).get("answer", "")).strip()
+        if not answer: continue
+        signal = _open_answer_signal(answer)
+        reviewed.append((item, signal))
+    valid = [
+        item for item, signal in reviewed
+        if not signal["low_info"] and signal["score"] >= 45 and signal["signal"] >= 36
+    ]
+    total_signal = sum(signal["signal"] for _, signal in reviewed)
+    average_score = round(sum(signal["score"] for _, signal in reviewed) / len(reviewed)) if reviewed else 0
+    return {
+        "ok": len(valid) >= 2 and average_score >= 45 and total_signal >= 120,
+        "valid_answers": valid,
+        "valid_count": len(valid),
+        "total_count": len(reviewed),
+        "average_score": average_score,
+        "total_signal": total_signal,
+    }
 
 
 def _fallback_analysis(traditional_type, identity, details, open_answers):
@@ -551,10 +619,10 @@ def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
 
 # ====== HTTP HANDLER ======
 def analyze_with_ai(traditional_type, identity, details, open_answers):
-    filtered = [oa for oa in open_answers if not is_nonsense(oa.get("answer",""))]
-    meaningful = len(filtered)
-    if meaningful == 0:
-        return _fallback_analysis(traditional_type, identity, details, open_answers)
+    review = _review_open_answer_quality(open_answers)
+    if not review["ok"]:
+        raise ValueError("开放题信息量还不够，暂不进入 AI 分析。请至少补充 2 道包含真实场景、选择或想法过程的回答。")
+    filtered = review["valid_answers"]
     try:
         return _analyze_with_deepseek(traditional_type, identity, details, filtered)
     except Exception as e:
@@ -608,12 +676,15 @@ def handle_score():
 @app.route("/api/analyze", methods=["POST"])
 def handle_analyze():
     data = request.get_json(force=True)
-    result = analyze_with_ai(
-        data.get("type", ""),
-        data.get("identity", ""),
-        data.get("details", {}),
-        data.get("open_answers", []),
-    )
+    try:
+        result = analyze_with_ai(
+            data.get("type", ""),
+            data.get("identity", ""),
+            data.get("details", {}),
+            data.get("open_answers", []),
+        )
+    except ValueError as exc:
+        return str(exc), 400, {"Content-Type": "text/plain; charset=utf-8"}
     result["analysis_locale"] = "zh-CN"
     return jsonify(result)
 
