@@ -1955,12 +1955,8 @@
       window.scrollTo({ top: 0, behavior });
     } else {
       const header = document.querySelector(".top");
-      const mobileNav = document.querySelector(".persona-mobile-report-nav");
       const headerHeight = header?.getBoundingClientRect?.().height || 0;
-      const mobileNavHeight = mobileNav && getComputedStyle(mobileNav).display !== "none"
-        ? mobileNav.getBoundingClientRect().height
-        : 0;
-      const offset = Math.ceil(headerHeight + mobileNavHeight + 18);
+      const offset = Math.ceil(headerHeight + 18);
       const targetTop = target.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top: Math.max(0, targetTop), behavior });
     }

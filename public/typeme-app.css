@@ -3305,27 +3305,33 @@ body.typeme-ui-active[class*="typeme-theme-"] .scale-choice.vn3{color:color-mix(
 }
 @media(max-width:640px){
   body.typeme-ui-active .persona-mobile-report-nav{
-    position:sticky;
-    top:76px;
-    z-index:18;
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:6px;
-    margin:10px 0 12px;
-    padding:8px;
+    display:flex;
+    gap:7px;
+    width:calc(100vw - 32px);
+    margin:10px auto 12px;
+    padding:6px;
     border:1px solid var(--theme-accent-line,rgba(36,33,29,.08));
-    border-radius:20px;
+    border-radius:999px;
     background:
       linear-gradient(145deg,color-mix(in srgb,var(--theme-surface,#fff8ef) 88%,white),color-mix(in srgb,var(--theme-surface-2,#f1e1d8) 58%,white));
-    box-shadow:0 14px 34px var(--theme-shadow,rgba(80,62,39,.08));
+    box-shadow:0 10px 24px color-mix(in srgb,var(--theme-shadow,rgba(80,62,39,.08)) 58%,transparent);
+    overflow-x:auto;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+  body.typeme-ui-active .persona-mobile-report-nav::-webkit-scrollbar{
+    display:none;
   }
   body.typeme-ui-active .persona-mobile-report-nav a{
-    min-height:34px;
-    display:grid;
-    place-items:center;
+    flex:0 0 auto;
+    min-width:72px;
+    min-height:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     border:1px solid var(--theme-accent-line,rgba(36,33,29,.08));
-    border-radius:14px;
-    background:color-mix(in srgb,var(--theme-surface,#fff8ef) 82%,white);
+    border-radius:999px;
+    background:color-mix(in srgb,var(--theme-surface,#fff8ef) 76%,rgba(255,255,255,.72));
     color:var(--theme-accent-ink,var(--family-ink,var(--persona-muted)));
     font-size:12px;
     font-weight:820;
@@ -3486,18 +3492,18 @@ body.typeme-ui-active[class*="typeme-theme-"] .scale-choice.vn3{color:color-mix(
    afterword and actions stay at the end. */
 @media(max-width:640px){
   body.typeme-ui-active .persona-result-profile{
-    scroll-padding-top:152px;
+    scroll-padding-top:96px;
   }
   body.typeme-ui-active #top,
   body.typeme-ui-active #persona-coordinates,
   body.typeme-ui-active #persona-evidence,
   body.typeme-ui-active #persona-open-evidence,
   body.typeme-ui-active #persona-afterword{
-    scroll-margin-top:152px;
+    scroll-margin-top:96px;
   }
   body.typeme-ui-active #persona-evidence,
   body.typeme-ui-active #persona-open-evidence{
-    scroll-margin-top:176px;
+    scroll-margin-top:108px;
   }
   body.typeme-ui-active .persona-profile-layout{
     display:flex!important;
