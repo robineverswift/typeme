@@ -52,6 +52,19 @@ Studio uses Supabase Auth for login and server-side Supabase REST calls for admi
 
 Run `supabase/schema.sql` in the Supabase SQL editor before using the dashboard, content tables, analysis logs, or anonymous sample storage. The service-role key is used only inside `api/index.py`; never expose it in frontend code.
 
+If the main Studio tables already exist but the dashboard reports `PGRST205` for `persona_response_samples`, run the smaller patch instead:
+
+```sql
+-- Supabase SQL editor
+-- see supabase/studio_samples_patch.sql
+```
+
+After configuring Vercel and Supabase, verify the deployed wiring locally:
+
+```bash
+python scripts/check-remote-studio.py
+```
+
 ## Local Development
 
 Install dependencies:
