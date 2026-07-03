@@ -472,6 +472,67 @@ STUDIO_DEFAULT_VISUAL_PRESET = {
 }
 
 
+STUDIO_PROMPT_CALL1_TEMPLATE = """你是MBTI人格分析专家。分析一位{type}型人格的开放题回答，输出JSON。
+
+传统量表结果：{type}
+维度得分：
+{dimension_summary}
+
+回答内容：
+{answers_text}
+
+要求：
+- 通篇用「你」称呼对方，不要用「用户」
+- 引用原话时直接加引号，不要标注Q1/Q2等编号
+- 核心任务是验证为什么对方确实是{type}型，同时指出开放题里出现的张力
+- 从认知功能角度分析，但用F/T/N/S等普通用户可读的方向字母，不要堆Fe/Ni缩写
+- 使用心理学、认知科学术语但自然融入
+- 使用中文标点符号
+
+请输出JSON，不要markdown代码块：
+{
+  "analysis_summary": "400~600字深度分析",
+  "dimension_analysis": {
+    "EI": {"倾向":"E/I","confidence":0-100,"evidence":"引用原话","分析":"100~180字认知功能分析"},
+    "SN": {"倾向":"S/N","confidence":0-100,"evidence":"引用原话","分析":"100~180字认知功能分析"},
+    "TF": {"倾向":"T/F","confidence":0-100,"evidence":"引用原话","分析":"100~180字认知功能分析"},
+    "JP": {"倾向":"J/P","confidence":0-100,"evidence":"引用原话","分析":"100~180字认知功能分析"},
+    "AT": {"倾向":"A/T","confidence":0-100,"evidence":"引用原话","分析":"100~180字认知功能分析"}
+  },
+  "agreement": "high/medium/low",
+  "agreement_details": {"matching_dims":[],"differing_dims":[],"explanation":"解释一致与差异"},
+  "differences": [],
+  "strengths": [],
+  "growth_areas": [],
+  "career_hints": [],
+  "core_tension": "80字以内，为你的焦虑或困境精准命名",
+  "verdicts": {"EI":"✅","SN":"✅","TF":"⚠️","JP":"✅","AT":"?"}
+}
+
+关于verdicts：根据开放题内容对每个维度做独立判断，不要照抄量表倾向。✅=支持量表倾向，⚠️=存在张力，?=信息不足。每个维度都要写，不要全部写✅。"""
+
+
+STUDIO_PROMPT_CALL2_TEMPLATE = """你是一位温暖有洞察力的心理学家兼作家。请为一位{type}型的人撰写两份文字。
+
+素材：
+{analysis_context}
+
+请直接输出两段内容：
+
+一、整体气质画像
+写一段180~260字的画像。要像一个敏锐的人在认真看见对方，而不是模板化夸奖。可以使用比喻，但必须贴合素材。不要提及“系统”“模型”“量表算法”。
+
+二、悄悄话
+写一段120~180字的安抚性文字。语气克制、真诚、像私下递给对方的一句话。不要鸡汤，不要过度承诺，不要治疗化。
+
+要求：
+- 全文用「你」
+- 中文标点
+- 不要markdown列表
+- 不要解释写作过程
+- 不要加入与素材无关的类型刻板印象"""
+
+
 def score_traditional(answers):
     net_scores = {}
     for dim in DIM_ORDER:
@@ -1265,7 +1326,7 @@ def handle_studio_prompts():
             "name": "_analyze_with_deepseek Call 1",
             "source_file": "api/index.py",
             "purpose": "Generate structured JSON analysis from scale details and open answers.",
-            "template": "Runtime prompt is embedded in api/index.py. It asks for analysis_summary, dimension_analysis, agreement, differences, strengths, growth_areas, career_hints, core_tension, and verdicts.",
+            "template": STUDIO_PROMPT_CALL1_TEMPLATE,
             "temperature": 0.5,
             "max_tokens": 4096,
         },
@@ -1273,7 +1334,7 @@ def handle_studio_prompts():
             "name": "_analyze_with_deepseek narrative composition",
             "source_file": "api/index.py",
             "purpose": "Generate public-facing TypeMe result narrative from structured analysis.",
-            "template": "Runtime narrative prompt is embedded in api/index.py.",
+            "template": STUDIO_PROMPT_CALL2_TEMPLATE,
             "temperature": 0.7,
             "max_tokens": 2048,
         },
