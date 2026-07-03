@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Project Mirror — Vercel Serverless (Flask)"""
-import json, os, random, re, sys, time, traceback
+"""TypeMe — Vercel Serverless (Flask)."""
+import base64, hashlib, hmac, json, os, random, re, secrets, sys, time, traceback
 from pathlib import Path
-from flask import Flask, request, jsonify
+from urllib.parse import quote, urlencode
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+from flask import Flask, request, jsonify, make_response
 
 app = Flask(__name__)
 
@@ -17,6 +20,25 @@ AI_API_KEY = os.environ.get("AI_API_KEY", os.environ.get("DEEPSEEK_API_KEY", "")
 AI_URL = os.environ.get("AI_URL", "https://api.deepseek.com/v1/chat/completions")
 AI_MODEL = os.environ.get("AI_MODEL", "deepseek-chat")
 AI_AUTH_HEADER = os.environ.get("AI_AUTH_HEADER", "Authorization")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+STUDIO_COOKIE_SECRET = os.environ.get("STUDIO_COOKIE_SECRET", "")
+STUDIO_ADMIN_EMAILS = {
+    email.strip().lower()
+    for email in os.environ.get("STUDIO_ADMIN_EMAILS", "").split(",")
+    if email.strip()
+}
+STUDIO_COOKIE_ACCESS = "pm_studio_access"
+STUDIO_COOKIE_REFRESH = "pm_studio_refresh"
+STUDIO_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+SAMPLE_SCHEMA_VERSION = "persona_sample_v1"
+SAMPLE_MAX_BODY_BYTES = 260_000
+SAMPLE_ALLOWED_TOP_KEYS = {
+    "schema_version", "app_version", "question_version", "prompt_version",
+    "client_sample_id", "created_at", "consent", "traditional", "ai",
+    "final_type", "answers", "open_answers", "selected_questions", "feedback",
+}
 
 DIM_ORDER = ["EI", "SN", "TF", "JP", "AT"]
 DIM_POLES = {
@@ -47,6 +69,407 @@ try:
             questions_data = json.load(f)
 except Exception as e:
     print(f"WARN: failed to load questions.json: {e}")
+
+
+def json_response(data, status=200, extra_headers=None):
+    body = json.dumps(data, ensure_ascii=False)
+    response = make_response(body, status)
+    response.headers["Content-Type"] = "application/json; charset=utf-8"
+    response.headers["Cache-Control"] = "no-store"
+    for key, value in (extra_headers or []):
+        response.headers[key] = value
+    return response
+
+
+def _safe_int(value, default=0):
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _studio_ai_configured():
+    return bool(AI_API_KEY or os.environ.get("AI_API_KEY") or os.environ.get("DEEPSEEK_API_KEY"))
+
+
+def is_db_enabled():
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+
+def _studio_auth_configured():
+    return bool(SUPABASE_URL and SUPABASE_ANON_KEY and STUDIO_ADMIN_EMAILS)
+
+
+def _studio_secret():
+    seed = STUDIO_COOKIE_SECRET or SUPABASE_SERVICE_ROLE_KEY or AI_API_KEY or "typeme-studio"
+    return seed.encode("utf-8")
+
+
+def _b64url(data):
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+def _sign_token(value):
+    sig = hmac.new(_studio_secret(), value.encode("utf-8"), hashlib.sha256).digest()
+    return f"{value}.{_b64url(sig)}"
+
+
+def _unsign_token(signed):
+    if not signed or "." not in signed:
+        return ""
+    value, sig = signed.rsplit(".", 1)
+    expected = _b64url(hmac.new(_studio_secret(), value.encode("utf-8"), hashlib.sha256).digest())
+    return value if hmac.compare_digest(sig, expected) else ""
+
+
+def _cookie_secure():
+    return request.is_secure or request.headers.get("x-forwarded-proto", "").lower() == "https"
+
+
+def _set_studio_cookie(response, name, value, max_age=STUDIO_COOKIE_MAX_AGE):
+    response.set_cookie(
+        name,
+        value,
+        max_age=max_age,
+        httponly=True,
+        secure=_cookie_secure(),
+        samesite="Lax",
+        path="/",
+    )
+
+
+def _clear_studio_cookies(response):
+    _set_studio_cookie(response, STUDIO_COOKIE_ACCESS, "", 0)
+    _set_studio_cookie(response, STUDIO_COOKIE_REFRESH, "", 0)
+
+
+def _supabase_auth_request(path, payload=None, access_token=None):
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        return 503, {"error": "Supabase Auth is not configured"}
+    body = None if payload is None else json.dumps(payload).encode("utf-8")
+    req = Request(f"{SUPABASE_URL}/auth/v1/{path}", data=body, method="GET" if payload is None else "POST")
+    req.add_header("apikey", SUPABASE_ANON_KEY)
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Authorization", f"Bearer {access_token or SUPABASE_ANON_KEY}")
+    try:
+        with urlopen(req, timeout=10) as response:
+            raw = response.read().decode("utf-8")
+            return response.status, json.loads(raw) if raw else None
+    except HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            return e.code, json.loads(raw) if raw else {"error": e.reason}
+        except json.JSONDecodeError:
+            return e.code, {"error": raw or e.reason}
+    except (URLError, TimeoutError) as e:
+        return 502, {"error": str(e)}
+
+
+def _db_headers():
+    return {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+    }
+
+
+def db_request(path, method="GET", payload=None):
+    if not is_db_enabled():
+        return 503, {"error": "Supabase is not configured"}
+    body = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = Request(f"{SUPABASE_URL}/rest/v1/{path}", data=body, method=method)
+    for key, value in _db_headers().items():
+        req.add_header(key, value)
+    try:
+        with urlopen(req, timeout=10) as response:
+            raw = response.read().decode("utf-8")
+            return response.status, json.loads(raw) if raw else None
+    except HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(raw) if raw else {"error": e.reason}
+        except json.JSONDecodeError:
+            parsed = {"error": raw or e.reason}
+        return e.code, parsed
+    except (URLError, TimeoutError) as e:
+        return 502, {"error": str(e)}
+
+
+def list_rows(table, columns="*", order="created_at.desc", limit=200):
+    query = urlencode({"select": columns, "order": order, "limit": str(limit)})
+    return db_request(f"{quote(table)}?{query}")
+
+
+def get_row(table, row_id):
+    query = urlencode({"id": f"eq.{row_id}", "select": "*", "limit": "1"})
+    status, rows = db_request(f"{quote(table)}?{query}")
+    if status < 300 and isinstance(rows, list):
+        return status, rows[0] if rows else None
+    return status, rows
+
+
+def create_row(table, data):
+    return db_request(quote(table), "POST", data)
+
+
+def update_row(table, row_id, data):
+    query = urlencode({"id": f"eq.{row_id}"})
+    return db_request(f"{quote(table)}?{query}", "PATCH", data)
+
+
+def delete_row(table, row_id):
+    query = urlencode({"id": f"eq.{row_id}"})
+    return db_request(f"{quote(table)}?{query}", "DELETE")
+
+
+def _studio_state(email="", authenticated=False, is_admin=False):
+    return {
+        "authenticated": authenticated,
+        "email": email,
+        "isAdmin": is_admin,
+        "authConfigured": _studio_auth_configured(),
+        "localAuthConfigured": False,
+        "dbConfigured": is_db_enabled(),
+        "adminEmailsConfigured": bool(STUDIO_ADMIN_EMAILS),
+    }
+
+
+def _studio_user():
+    access = _unsign_token(request.cookies.get(STUDIO_COOKIE_ACCESS, ""))
+    if not access:
+        return None, _studio_state()
+    status, user = _supabase_auth_request("user", access_token=access)
+    if status >= 300 or not isinstance(user, dict):
+        return None, _studio_state(authenticated=False)
+    email = (user.get("email") or "").lower()
+    is_admin = bool(email and email in STUDIO_ADMIN_EMAILS)
+    return user, _studio_state(email=email, authenticated=True, is_admin=is_admin)
+
+
+def _studio_user_with_refresh():
+    user, state = _studio_user()
+    if state.get("authenticated"):
+        return user, state, None
+    refresh = _unsign_token(request.cookies.get(STUDIO_COOKIE_REFRESH, ""))
+    if not refresh or not _studio_auth_configured():
+        return user, state, None
+    status, auth = _supabase_auth_request("token?grant_type=refresh_token", {"refresh_token": refresh})
+    if status >= 300 or not isinstance(auth, dict):
+        return None, _studio_state(), None
+    access = auth.get("access_token", "")
+    new_refresh = auth.get("refresh_token", refresh)
+    auth_user = auth.get("user") or {}
+    email = (auth_user.get("email") or "").lower()
+    is_admin = bool(email and email in STUDIO_ADMIN_EMAILS)
+    response = json_response(_studio_state(email=email, authenticated=True, is_admin=is_admin))
+    _set_studio_cookie(response, STUDIO_COOKIE_ACCESS, _sign_token(access))
+    _set_studio_cookie(response, STUDIO_COOKIE_REFRESH, _sign_token(new_refresh))
+    return auth_user, _studio_state(email=email, authenticated=True, is_admin=is_admin), response
+
+
+def _require_studio_admin():
+    user, state, refresh_response = _studio_user_with_refresh()
+    if not state.get("authenticated"):
+        return None, state, refresh_response or json_response({"error": "Studio login required", **state}, 401)
+    if not state.get("isAdmin"):
+        return None, state, json_response({"error": "Studio admin access required", **state}, 403)
+    return user, state, None
+
+
+def _clip_sample_text(value, limit=8000):
+    return "" if value is None else str(value)[:limit]
+
+
+def _clip_json(value, depth=0):
+    if depth > 8:
+        return None
+    if isinstance(value, dict):
+        return {str(k)[:80]: _clip_json(v, depth + 1) for k, v in list(value.items())[:80]}
+    if isinstance(value, list):
+        return [_clip_json(v, depth + 1) for v in value[:120]]
+    if isinstance(value, str):
+        return _clip_sample_text(value)
+    if isinstance(value, (int, float, bool)) or value is None:
+        return value
+    return str(value)[:500]
+
+
+def _normalize_sample_type(value):
+    text = str(value or "").strip().upper()
+    if not text:
+        return ""
+    match = ""
+    for i in range(max(0, len(text) - 3)):
+        part = text[i:i + 4]
+        if len(part) == 4 and part[0] in "IE" and part[1] in "SN" and part[2] in "TF" and part[3] in "JP":
+            match = part
+            break
+    if not match:
+        return text[:16]
+    suffix = "-T" if "-T" in text else "-A" if "-A" in text else ""
+    return f"{match}{suffix}"
+
+
+def _sanitize_response_sample(payload):
+    if not isinstance(payload, dict):
+        raise ValueError("Sample payload must be a JSON object")
+    consent = payload.get("consent") or {}
+    if not isinstance(consent, dict) or consent.get("scope") != "anonymous_research":
+        raise ValueError("Anonymous research consent is required")
+    if consent.get("raw_open_answers") is not True:
+        raise ValueError("Open-answer consent must be explicit")
+
+    clean = {key: _clip_json(payload.get(key)) for key in SAMPLE_ALLOWED_TOP_KEYS if key in payload}
+    clean["schema_version"] = clean.get("schema_version") or SAMPLE_SCHEMA_VERSION
+    clean["consent"] = {
+        "scope": "anonymous_research",
+        "raw_open_answers": True,
+        "submitted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    traditional = clean.get("traditional") if isinstance(clean.get("traditional"), dict) else {}
+    ai = clean.get("ai") if isinstance(clean.get("ai"), dict) else {}
+    final_type = _normalize_sample_type(
+        clean.get("final_type")
+        or ai.get("final_type")
+        or ai.get("ai_type")
+        or traditional.get("typeCode")
+        or f"{traditional.get('type', '')}-{traditional.get('identity', '')}"
+    )
+    traditional_type = _normalize_sample_type(
+        ai.get("traditional_type") or f"{traditional.get('type', '')}-{traditional.get('identity', '')}"
+    )
+    ai_type = _normalize_sample_type(ai.get("ai_type") or ai.get("final_type"))
+    sample_seed = clean.get("client_sample_id") or secrets.token_hex(12)
+    sample_id = hashlib.sha256(f"{sample_seed}:{time.time()}:{secrets.token_hex(8)}".encode("utf-8")).hexdigest()[:24]
+    return {
+        "sample_id": sample_id,
+        "schema_version": str(clean.get("schema_version") or SAMPLE_SCHEMA_VERSION)[:64],
+        "app_version": str(clean.get("app_version") or "")[:80],
+        "question_version": str(clean.get("question_version") or "")[:80],
+        "prompt_version": str(clean.get("prompt_version") or "")[:80],
+        "final_type": final_type,
+        "traditional_type": traditional_type,
+        "ai_type": ai_type,
+        "answer_quality_score": _safe_int(ai.get("answer_quality_score"), 0),
+        "consent_scope": "anonymous_research",
+        "payload": clean,
+    }
+
+
+def _sample_type_family(type_code):
+    code = str(type_code or "").upper()[:4]
+    if code in {"INTJ", "INTP", "ENTJ", "ENTP"}:
+        return "Analysts"
+    if code in {"INFJ", "INFP", "ENFJ", "ENFP"}:
+        return "Diplomats"
+    if code in {"ISTJ", "ISFJ", "ESTJ", "ESFJ"}:
+        return "Sentinels"
+    if code in {"ISTP", "ISFP", "ESTP", "ESFP"}:
+        return "Explorers"
+    return "Unknown"
+
+
+def _sample_quality_bucket(score):
+    value = _safe_int(score, 0)
+    if value >= 75:
+        return "high"
+    if value >= 50:
+        return "medium"
+    if value > 0:
+        return "low"
+    return "unknown"
+
+
+def _summarize_studio_samples(rows):
+    by_type = {}
+    by_family = {}
+    by_quality = {"high": 0, "medium": 0, "low": 0, "unknown": 0}
+    by_storage = {}
+    recent_low = []
+    quality_values = []
+    for row in rows:
+        final_type = row.get("final_type") or row.get("ai_type") or row.get("traditional_type") or "unknown"
+        family = _sample_type_family(final_type)
+        quality = _safe_int(row.get("answer_quality_score"), 0)
+        bucket = _sample_quality_bucket(quality)
+        by_type[final_type] = by_type.get(final_type, 0) + 1
+        by_family[family] = by_family.get(family, 0) + 1
+        by_quality[bucket] = by_quality.get(bucket, 0) + 1
+        storage = row.get("storage") or "supabase"
+        by_storage[storage] = by_storage.get(storage, 0) + 1
+        if quality:
+            quality_values.append(quality)
+        if bucket in {"low", "unknown"}:
+            recent_low.append({
+                "sample_id": row.get("sample_id") or row.get("id") or "",
+                "final_type": final_type,
+                "quality": quality,
+                "storage": storage,
+                "created_at": row.get("created_at", ""),
+            })
+    top_types = sorted(by_type.items(), key=lambda item: item[1], reverse=True)[:8]
+    return {
+        "total": len(rows),
+        "averageQuality": round(sum(quality_values) / len(quality_values)) if quality_values else 0,
+        "byType": [{"type": key, "count": value} for key, value in top_types],
+        "byFamily": by_family,
+        "byQuality": by_quality,
+        "byStorage": by_storage,
+        "recentLowQuality": recent_low[:8],
+    }
+
+
+def _collect_studio_samples(limit=300):
+    status, body = list_rows("persona_response_samples", order="created_at.desc", limit=limit)
+    if status < 300 and isinstance(body, list):
+        return [{**item, "storage": item.get("storage") or "supabase"} for item in body], ""
+    error = body.get("error", "Unable to read Supabase samples") if isinstance(body, dict) else "Unable to read Supabase samples"
+    return [], error
+
+
+def _content_specs():
+    return {
+        "persona-types": {
+            "table": "persona_types",
+            "order": "type_code.asc",
+            "fields": {"type_code", "display_name", "short_description", "long_description", "keywords_json", "strengths_json", "risks_json"},
+            "defaults": {"keywords_json": [], "strengths_json": [], "risks_json": []},
+        },
+        "prompt-versions": {
+            "table": "prompt_versions",
+            "order": "created_at.desc",
+            "fields": {"name", "version", "purpose", "prompt_text", "schema_json", "is_active"},
+            "defaults": {"schema_json": {}, "is_active": False},
+        },
+        "visual-presets": {
+            "table": "persona_visual_presets",
+            "order": "type_code.asc",
+            "fields": {"type_code", "palette_json", "motifs_json", "dot_matrix_params_json", "anime_style_params_json", "background_field_params_json"},
+            "defaults": {"palette_json": [], "motifs_json": [], "dot_matrix_params_json": {}, "anime_style_params_json": {}, "background_field_params_json": {}},
+        },
+    }
+
+
+def _sanitize_content_payload(resource, payload, partial=False):
+    spec = _content_specs()[resource]
+    data = dict(spec.get("defaults", {})) if not partial else {}
+    for key in spec["fields"]:
+        if key in payload:
+            data[key] = payload[key]
+    return data
+
+
+STUDIO_DEFAULT_VISUAL_PRESET = {
+    "palette": ["#DDEEE6", "#E8E3F4", "#2F8F72", "#6F5FA8"],
+    "motifs": ["mirror", "signal", "field"],
+    "temperament": "warm exploratory",
+    "dotMatrixParams": {"baseDensity": 0.64, "contrast": 0.58, "softness": 0.74},
+    "animeInspiredParams": {"silhouetteType": "soft-forward", "eyeEnergy": 0.66, "posture": "leaning toward signal"},
+    "backgroundFieldParams": {"drift": 0.26, "refraction": 0.38},
+    "iconography": ["lens", "ray", "field"],
+    "resultCardLayoutHints": {"emphasis": "portrait-first"},
+}
 
 
 def score_traditional(answers):
@@ -662,6 +1085,289 @@ def handle_typeme_js():
 @app.route("/api/questions")
 def handle_questions():
     return jsonify(questions_data)
+
+
+@app.route("/api/samples", methods=["POST"])
+def handle_sample_submit():
+    raw = request.get_data(cache=False) or b""
+    if len(raw) > SAMPLE_MAX_BODY_BYTES:
+        return "Sample payload is too large", 413, {"Content-Type": "text/plain; charset=utf-8"}
+    try:
+        payload = json.loads(raw.decode("utf-8")) if raw else {}
+        row = _sanitize_response_sample(payload)
+    except UnicodeDecodeError:
+        return "Sample payload must be UTF-8", 400, {"Content-Type": "text/plain; charset=utf-8"}
+    except json.JSONDecodeError:
+        return "Invalid sample JSON", 400, {"Content-Type": "text/plain; charset=utf-8"}
+    except ValueError as exc:
+        return str(exc), 400, {"Content-Type": "text/plain; charset=utf-8"}
+
+    status, body = create_row("persona_response_samples", row)
+    if status >= 300:
+        detail = body if isinstance(body, dict) else {"error": "Supabase write failed"}
+        return json_response({"ok": False, "error": "Supabase write failed", "detail": detail}, status)
+    return json_response({"ok": True, "sample_id": row["sample_id"], "stored": "supabase"})
+
+
+@app.route("/api/studio/auth/login", methods=["POST"])
+def handle_studio_login():
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    password = body.get("password") or ""
+    if not _studio_auth_configured():
+        return json_response({
+            "error": "Studio Auth is not configured",
+            **_studio_state(),
+        }, 503)
+    if not email or not password:
+        return json_response({"error": "Email and password are required"}, 400)
+
+    status, auth = _supabase_auth_request("token?grant_type=password", {"email": email, "password": password})
+    if status >= 300 or not isinstance(auth, dict):
+        return json_response({"error": "Login failed", "detail": auth}, 401)
+    user = auth.get("user") or {}
+    auth_email = (user.get("email") or email).lower()
+    if auth_email not in STUDIO_ADMIN_EMAILS:
+        return json_response({"error": "This account is not allowed to access Studio", "email": auth_email}, 403)
+
+    response = json_response({
+        "authenticated": True,
+        "email": auth_email,
+        "isAdmin": True,
+        "dbConfigured": is_db_enabled(),
+    })
+    _set_studio_cookie(response, STUDIO_COOKIE_ACCESS, _sign_token(auth.get("access_token", "")))
+    _set_studio_cookie(response, STUDIO_COOKIE_REFRESH, _sign_token(auth.get("refresh_token", "")))
+    return response
+
+
+@app.route("/api/studio/auth/logout", methods=["POST"])
+def handle_studio_logout():
+    response = json_response({"ok": True})
+    _clear_studio_cookies(response)
+    return response
+
+
+@app.route("/api/studio/auth/me")
+def handle_studio_me():
+    _, state, refresh_response = _studio_user_with_refresh()
+    if refresh_response is not None and state.get("authenticated"):
+        return refresh_response
+    return json_response(state)
+
+
+@app.route("/api/studio/dev-access")
+def handle_studio_dev_access():
+    _, state, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    return json_response({"allowed": True, "reason": "Studio admin session", "loginUrl": "/studio", **state})
+
+
+@app.route("/api/studio/health")
+def handle_studio_health():
+    _, state, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    qi = questions_data or {}
+    return json_response({
+        "status": "ok",
+        "mode": "studio",
+        "questions": {
+            "scale": len(qi.get("traditional", [])),
+            "open": len(qi.get("open_ended_pool", [])),
+            "personaTypes": len(qi.get("type_profiles", {})),
+        },
+        "dbConfigured": is_db_enabled(),
+        "aiConfigured": _studio_ai_configured(),
+        "authConfigured": _studio_auth_configured(),
+        "localAuthConfigured": False,
+        "adminEmailsConfigured": bool(STUDIO_ADMIN_EMAILS),
+        "email": state.get("email", ""),
+    })
+
+
+@app.route("/api/studio/dashboard")
+def handle_studio_dashboard():
+    _, _, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    qi = questions_data or {}
+    samples, db_error = _collect_studio_samples(300)
+    content = {}
+    content_errors = {}
+    for resource, spec in _content_specs().items():
+        status, body = list_rows(spec["table"], columns="id", order=spec["order"], limit=1000)
+        if status < 300 and isinstance(body, list):
+            content[resource] = len(body)
+        else:
+            content[resource] = 0
+            if status != 503:
+                content_errors[resource] = body.get("error", "Unable to read rows") if isinstance(body, dict) else "Unable to read rows"
+    return json_response({
+        "status": "ok",
+        "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "config": {
+            "dbConfigured": is_db_enabled(),
+            "aiConfigured": _studio_ai_configured(),
+            "authConfigured": _studio_auth_configured(),
+            "localAuthConfigured": False,
+            "adminEmailsConfigured": bool(STUDIO_ADMIN_EMAILS),
+        },
+        "questions": {
+            "scale": len(qi.get("traditional", [])),
+            "open": len(qi.get("open_ended_pool", [])),
+            "typeProfiles": len(qi.get("type_profiles", {})),
+            "dimensions": len(qi.get("dimensions", [])),
+        },
+        "content": content,
+        "contentErrors": content_errors,
+        "samples": _summarize_studio_samples(samples),
+        "dbError": db_error,
+    })
+
+
+@app.route("/api/studio/env")
+def handle_studio_env():
+    _, _, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    safe = {
+        key: value for key, value in os.environ.items()
+        if not any(part in key.lower() for part in ["key", "secret", "token", "password", "auth"])
+    }
+    qi = questions_data or {}
+    return json_response({
+        "cwd": os.getcwd(),
+        "python": sys.version,
+        "safe_env_keys": sorted(safe.keys()),
+        "hasQuestions": bool(questions_data),
+        "questions": {
+            "scale": len(qi.get("traditional", [])),
+            "open": len(qi.get("open_ended_pool", [])),
+            "personaTypes": len(qi.get("type_profiles", {})),
+        },
+        "dimensions": qi.get("dimensions", []),
+        "dbConfigured": is_db_enabled(),
+        "aiConfigured": _studio_ai_configured(),
+        "aiBackend": "deepseek",
+        "aiModel": AI_MODEL,
+    })
+
+
+@app.route("/api/studio/prompts")
+def handle_studio_prompts():
+    _, _, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    return json_response({
+        "call1": {
+            "name": "_analyze_with_deepseek Call 1",
+            "source_file": "api/index.py",
+            "purpose": "Generate structured JSON analysis from scale details and open answers.",
+            "template": "Runtime prompt is embedded in api/index.py. It asks for analysis_summary, dimension_analysis, agreement, differences, strengths, growth_areas, career_hints, core_tension, and verdicts.",
+            "temperature": 0.5,
+            "max_tokens": 4096,
+        },
+        "call2": {
+            "name": "_analyze_with_deepseek narrative composition",
+            "source_file": "api/index.py",
+            "purpose": "Generate public-facing TypeMe result narrative from structured analysis.",
+            "template": "Runtime narrative prompt is embedded in api/index.py.",
+            "temperature": 0.7,
+            "max_tokens": 2048,
+        },
+    })
+
+
+@app.route("/api/studio/logs")
+def handle_studio_logs():
+    _, _, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    rows = []
+    db_error = ""
+    status, body = list_rows(
+        "analysis_logs",
+        columns="id,created_at,event_type,message,latency_ms,metadata_json",
+        order="created_at.desc",
+        limit=200,
+    )
+    if status < 300 and isinstance(body, list):
+        rows = body
+    else:
+        db_error = body.get("error", "Unable to read analysis logs") if isinstance(body, dict) else "Unable to read analysis logs"
+    by_event = {}
+    latency_values = []
+    for row in rows:
+        event_type = row.get("event_type") or "unknown"
+        by_event[event_type] = by_event.get(event_type, 0) + 1
+        latency = row.get("latency_ms")
+        if isinstance(latency, (int, float)):
+            latency_values.append(latency)
+    return json_response({
+        "rows": rows,
+        "summary": {
+            "total": len(rows),
+            "byEvent": by_event,
+            "averageLatencyMs": round(sum(latency_values) / len(latency_values)) if latency_values else None,
+            "withLatency": len(latency_values),
+        },
+        "dbError": db_error,
+    })
+
+
+@app.route("/api/studio/persona-presets")
+def handle_studio_persona_presets():
+    _, _, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    return json_response({
+        "defaultPreset": STUDIO_DEFAULT_VISUAL_PRESET,
+        "note": "Type-specific presets are managed through the visual presets content table.",
+    })
+
+
+@app.route("/api/studio/samples")
+def handle_studio_samples():
+    _, _, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    rows, db_error = _collect_studio_samples(300)
+    return json_response({"rows": rows, "dbConfigured": is_db_enabled(), "dbError": db_error})
+
+
+@app.route("/api/studio/content/<resource>", methods=["GET", "POST"])
+@app.route("/api/studio/content/<resource>/<row_id>", methods=["GET", "PATCH", "DELETE"])
+def handle_studio_content(resource, row_id=""):
+    _, _, error_response = _require_studio_admin()
+    if error_response:
+        return error_response
+    specs = _content_specs()
+    if resource not in specs:
+        return json_response({"error": f"Unknown Studio content resource: {resource}"}, 404)
+    spec = specs[resource]
+    table = spec["table"]
+    if request.method == "GET":
+        status, body = get_row(table, row_id) if row_id else list_rows(table, order=spec["order"], limit=500)
+        rows = body if isinstance(body, list) else ([] if body is None else [body])
+        return json_response({"rows": rows}, status if status >= 300 else 200)
+    if request.method == "POST":
+        payload = _sanitize_content_payload(resource, request.get_json(silent=True) or {}, partial=False)
+        status, body = create_row(table, payload)
+        return json_response({"rows": body or []}, status if status >= 300 else 200)
+    if request.method == "PATCH":
+        if not row_id:
+            return json_response({"error": "Row id is required"}, 400)
+        payload = _sanitize_content_payload(resource, request.get_json(silent=True) or {}, partial=True)
+        status, body = update_row(table, row_id, payload)
+        return json_response({"rows": body or []}, status if status >= 300 else 200)
+    if request.method == "DELETE":
+        if not row_id:
+            return json_response({"error": "Row id is required"}, 400)
+        status, body = delete_row(table, row_id)
+        return json_response({"ok": status < 300, "rows": body or []}, status if status >= 300 else 200)
+    return json_response({"error": "Method not allowed"}, 405)
 
 
 @app.route("/api/score", methods=["POST"])
