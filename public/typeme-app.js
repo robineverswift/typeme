@@ -98,6 +98,24 @@
       afterwordLabel: "写在最后",
       afterwordTitle: (type) => `给 ${type} 型的你的悄悄话`,
       navTop: "顶部",
+      credibilityTitle: "结果可信度",
+      credibilityReviewed: "AI 已完成开放题复核",
+      credibilityFallback: "AI 复核未完成，仅展示量表档案",
+      credibilitySignal: "开放题信号",
+      credibilityValid: (valid, total) => `${valid}/${total} 道可用于复核`,
+      credibilityFlags: "信号标签",
+      qualityFlagLabels: {
+        scene: "具体场景",
+        cause: "因果",
+        choice: "选择",
+        emotion: "情绪",
+        time: "时间线",
+        sentence: "完整句子",
+        repeated_pattern: "重复模式",
+        long_repeat: "长重复",
+        character_dominance: "字符单一",
+        single_token_text: "单词块",
+      },
       exportReport: "导出报告",
       backInitial: "返回初步结果",
       submitSample: "提交样本（匿名）",
@@ -256,6 +274,24 @@
       afterwordLabel: "Afterword",
       afterwordTitle: (type) => `A note for your ${type} profile`,
       navTop: "Top",
+      credibilityTitle: "Result reliability",
+      credibilityReviewed: "AI review completed",
+      credibilityFallback: "AI review unavailable; scale profile only",
+      credibilitySignal: "Open-answer signal",
+      credibilityValid: (valid, total) => `${valid}/${total} answers usable for review`,
+      credibilityFlags: "Signal tags",
+      qualityFlagLabels: {
+        scene: "Scene",
+        cause: "Cause",
+        choice: "Choice",
+        emotion: "Emotion",
+        time: "Timeline",
+        sentence: "Complete sentence",
+        repeated_pattern: "Repeated pattern",
+        long_repeat: "Long repetition",
+        character_dominance: "Low variety",
+        single_token_text: "Single token",
+      },
       exportReport: "Export report",
       backInitial: "Back to initial result",
       submitSample: "Submit sample",
@@ -1605,16 +1641,72 @@
       </section>`;
   }
 
+  function personaQualityFlagLabels(flags = {}) {
+    const labels = t("qualityFlagLabels") || {};
+    return Object.entries(flags)
+      .filter(([, count]) => Number(count) > 0)
+      .slice(0, 6)
+      .map(([flag, count]) => `<span>${escHtml(labels[flag] || flag)} · ${escHtml(count)}</span>`)
+      .join("");
+  }
+
+  function personaQualitySummaryFromOpenAnswers(openAnswers = {}) {
+    const items = Object.values(openAnswers || {});
+    const scores = items.map((item) => Number(item?.quality_score || 0)).filter((score) => score > 0);
+    const flagCounts = {};
+    items.forEach((item) => {
+      (item?.quality_flags || []).forEach((flag) => {
+        flagCounts[flag] = (flagCounts[flag] || 0) + 1;
+      });
+    });
+    return {
+      total_count: items.length,
+      valid_count: items.filter((item) => Number(item?.quality_score || 0) >= 45).length,
+      average_score: scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : 0,
+      flag_counts: flagCounts,
+    };
+  }
+
+  function personaQualityFlags(ai, state) {
+    const direct = ai?.quality_flags;
+    if (direct?.flag_counts || direct?.items) return direct;
+    return personaQualitySummaryFromOpenAnswers(state?.openAnswers || {});
+  }
+
+  function personaQualityStatusBlock(ai, verified, state) {
+    const flags = personaQualityFlags(ai, state);
+    const avg = Number(ai?.answer_quality_score || flags.average_score || 0);
+    const valid = Number(flags.valid_count || 0);
+    const total = Number(flags.total_count || Object.keys(state?.openAnswers || {}).length || 0);
+    const flagChips = personaQualityFlagLabels(flags.flag_counts || {});
+    const statusText = verified ? t("credibilityReviewed") : t("credibilityFallback");
+    return `
+      <section class="persona-sidebar-card persona-quality-status">
+        <span>${escHtml(t("credibilityTitle"))}</span>
+        <div class="persona-quality-meter" aria-label="${escHtml(t("credibilitySignal"))}">
+          <b style="width:${Math.max(0, Math.min(100, avg))}%"></b>
+        </div>
+        <p><strong>${escHtml(avg ? `${avg}%` : "-")}</strong> · ${escHtml(statusText)}</p>
+        <small>${escHtml(t("credibilityValid", valid, total))}</small>
+        ${flagChips ? `<div class="persona-quality-flags" aria-label="${escHtml(t("credibilityFlags"))}">${flagChips}</div>` : ""}
+      </section>`;
+  }
+
   function personaBuildSamplePayload() {
     const state = personaGlobalState();
     if (!state?.traditional) throw new Error(isEnLocale() ? "There is no result to export yet." : "当前没有可导出的结果");
     const ai = state.ai || {};
     const finalType = ai.final_type || ai.ai_type || `${state.traditional.type}-${state.traditional.identity}`;
+    const qualityFlags = personaQualityFlags(ai, state);
     return {
       schema_version: "persona_sample_v1",
       app_version: "persona-reflection-v2",
+      client_version: "typeme-web-2026-07",
       question_version: "questions_v2",
       prompt_version: ai.prompt_version || ai.model || "",
+      source_locale: typeMeLocale,
+      analysis_status: ai.analysis_status || (personaVerifiedAI(ai, !!ai) ? "ai_reviewed" : "fallback"),
+      quality_flags: qualityFlags,
       client_sample_id: window.crypto?.randomUUID ? window.crypto.randomUUID() : String(Date.now()),
       created_at: new Date().toISOString(),
       consent: {
@@ -1932,6 +2024,7 @@
           </main>
           <aside class="persona-profile-side">
             ${restored ? `<section class="persona-restored-note"><span>${escHtml(restoredMeta.kicker)}</span><p>${escHtml(t("restoredCopy"))}</p></section>` : ""}
+            ${personaQualityStatusBlock(ai, verified, state)}
             ${personaCandidatePanel(result, true)}
             ${verified ? personaTraitBoard(type, tags, verified) : ""}
             ${personaResultActions(type, verified)}

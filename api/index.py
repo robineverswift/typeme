@@ -35,8 +35,8 @@ STUDIO_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 SAMPLE_SCHEMA_VERSION = "persona_sample_v1"
 SAMPLE_MAX_BODY_BYTES = 260_000
 SAMPLE_ALLOWED_TOP_KEYS = {
-    "schema_version", "app_version", "question_version", "prompt_version",
-    "client_sample_id", "created_at", "consent", "traditional", "ai",
+    "schema_version", "app_version", "client_version", "question_version", "prompt_version",
+    "client_sample_id", "created_at", "source_locale", "quality_flags", "analysis_status", "consent", "traditional", "ai",
     "final_type", "answers", "open_answers", "selected_questions", "feedback",
 }
 
@@ -60,6 +60,10 @@ _OPEN_SCENE_RE = re.compile(
     r"because|when|then|later|choice|conflict|pressure|example|specific|relationship|decide|regret|worry|afraid|feel|think|myself",
     re.IGNORECASE,
 )
+_OPEN_CAUSE_RE = re.compile(r"因为|所以|导致|于是|结果|原因|why|because|so|therefore|result", re.IGNORECASE)
+_OPEN_CHOICE_RE = re.compile(r"选择|决定|行动|处理|拒绝|接受|靠近|离开|choice|decide|action|handle|refuse|accept|approach|leave", re.IGNORECASE)
+_OPEN_EMOTION_RE = re.compile(r"感觉|情绪|害怕|担心|后悔|委屈|失落|兴奋|焦虑|愤怒|开心|feel|felt|emotion|afraid|worry|regret|sad|angry|happy|anxious", re.IGNORECASE)
+_OPEN_TIME_RE = re.compile(r"当时|后来|之前|之后|最近|上次|有一次|when|then|later|before|after|recently|once", re.IGNORECASE)
 _OPEN_REPEAT_RE = re.compile(r"(.{2,8})\1{2,}", re.IGNORECASE)
 
 questions_data = {}
@@ -329,6 +333,8 @@ def _sanitize_response_sample(payload):
     }
     traditional = clean.get("traditional") if isinstance(clean.get("traditional"), dict) else {}
     ai = clean.get("ai") if isinstance(clean.get("ai"), dict) else {}
+    quality_flags = clean.get("quality_flags") if isinstance(clean.get("quality_flags"), dict) else ai.get("quality_flags", {})
+    analysis_status = str(clean.get("analysis_status") or ai.get("analysis_status") or ("ai_reviewed" if ai.get("ai_available") else "unknown"))[:64]
     final_type = _normalize_sample_type(
         clean.get("final_type")
         or ai.get("final_type")
@@ -346,15 +352,31 @@ def _sanitize_response_sample(payload):
         "sample_id": sample_id,
         "schema_version": str(clean.get("schema_version") or SAMPLE_SCHEMA_VERSION)[:64],
         "app_version": str(clean.get("app_version") or "")[:80],
+        "client_version": str(clean.get("client_version") or clean.get("app_version") or "")[:80],
         "question_version": str(clean.get("question_version") or "")[:80],
         "prompt_version": str(clean.get("prompt_version") or "")[:80],
+        "source_locale": str(clean.get("source_locale") or ai.get("analysis_locale") or "")[:32],
+        "analysis_status": analysis_status,
         "final_type": final_type,
         "traditional_type": traditional_type,
         "ai_type": ai_type,
         "answer_quality_score": _safe_int(ai.get("answer_quality_score"), 0),
+        "quality_flags": quality_flags if isinstance(quality_flags, dict) else {},
         "consent_scope": "anonymous_research",
         "payload": clean,
     }
+
+
+SAMPLE_OPTIONAL_METADATA_COLUMNS = {"client_version", "source_locale", "analysis_status", "quality_flags"}
+
+
+def _legacy_sample_row(row):
+    return {key: value for key, value in row.items() if key not in SAMPLE_OPTIONAL_METADATA_COLUMNS}
+
+
+def _looks_like_missing_sample_metadata_columns(body):
+    text = json.dumps(body, ensure_ascii=False) if isinstance(body, (dict, list)) else str(body or "")
+    return "persona_response_samples" in text and any(column in text for column in SAMPLE_OPTIONAL_METADATA_COLUMNS)
 
 
 def _sample_type_family(type_code):
@@ -386,6 +408,8 @@ def _summarize_studio_samples(rows):
     by_family = {}
     by_quality = {"high": 0, "medium": 0, "low": 0, "unknown": 0}
     by_storage = {}
+    by_status = {}
+    flag_counts = {}
     recent_low = []
     quality_values = []
     for row in rows:
@@ -393,11 +417,18 @@ def _summarize_studio_samples(rows):
         family = _sample_type_family(final_type)
         quality = _safe_int(row.get("answer_quality_score"), 0)
         bucket = _sample_quality_bucket(quality)
+        status = row.get("analysis_status") or (row.get("payload") or {}).get("analysis_status") or "unknown"
+        flags = row.get("quality_flags")
+        if not isinstance(flags, dict):
+            flags = ((row.get("payload") or {}).get("ai") or {}).get("quality_flags") or (row.get("payload") or {}).get("quality_flags") or {}
+        for flag, count in (flags.get("flag_counts") or {}).items():
+            flag_counts[flag] = flag_counts.get(flag, 0) + _safe_int(count, 0)
         by_type[final_type] = by_type.get(final_type, 0) + 1
         by_family[family] = by_family.get(family, 0) + 1
         by_quality[bucket] = by_quality.get(bucket, 0) + 1
         storage = row.get("storage") or "supabase"
         by_storage[storage] = by_storage.get(storage, 0) + 1
+        by_status[status] = by_status.get(status, 0) + 1
         if quality:
             quality_values.append(quality)
         if bucket in {"low", "unknown"}:
@@ -405,6 +436,8 @@ def _summarize_studio_samples(rows):
                 "sample_id": row.get("sample_id") or row.get("id") or "",
                 "final_type": final_type,
                 "quality": quality,
+                "analysis_status": status,
+                "flags": flags.get("flag_counts") or {},
                 "storage": storage,
                 "created_at": row.get("created_at", ""),
             })
@@ -416,6 +449,8 @@ def _summarize_studio_samples(rows):
         "byFamily": by_family,
         "byQuality": by_quality,
         "byStorage": by_storage,
+        "byStatus": by_status,
+        "flagCounts": flag_counts,
         "recentLowQuality": recent_low[:8],
     }
 
@@ -781,10 +816,18 @@ def _open_answer_signal(text):
         max_run = max(max_run, run)
     repeated = bool(_OPEN_REPEAT_RE.search(compact))
     scene = bool(_OPEN_SCENE_RE.search(raw))
+    cause = bool(_OPEN_CAUSE_RE.search(raw))
+    choice = bool(_OPEN_CHOICE_RE.search(raw))
+    emotion = bool(_OPEN_EMOTION_RE.search(raw))
+    time_marker = bool(_OPEN_TIME_RE.search(raw))
     punct = bool(re.search(r"[，。！？；,.!?;]", raw))
     latin_run = bool(re.fullmatch(r"[a-z']{18,}", compact, re.IGNORECASE))
     score = min(62, round(signal / 180 * 58))
     if scene: score += 24
+    if cause: score += 7
+    if choice: score += 7
+    if emotion: score += 6
+    if time_marker: score += 5
     if punct and signal > 45: score += 8
     if signal > 90: score += 8
     if max_run >= 5: score -= 35
@@ -792,12 +835,29 @@ def _open_answer_signal(text):
     if dominance > 0.42 and signal > 12: score -= 30
     if latin_run and not scene: score -= 24
     if signal < 24: score = min(score, 24)
+    flags = []
+    if scene: flags.append("scene")
+    if cause: flags.append("cause")
+    if choice: flags.append("choice")
+    if emotion: flags.append("emotion")
+    if time_marker: flags.append("time")
+    if punct: flags.append("sentence")
+    if repeated: flags.append("repeated_pattern")
+    if max_run >= 6: flags.append("long_repeat")
+    if dominance > 0.48 and signal > 12: flags.append("character_dominance")
+    if latin_run and not scene: flags.append("single_token_text")
     return {
         "score": max(0, min(100, score)),
         "signal": signal,
         "dominance": dominance,
         "max_run": max_run,
         "repeated": repeated,
+        "has_scene": scene,
+        "has_cause": cause,
+        "has_choice": choice,
+        "has_emotion": emotion,
+        "has_time": time_marker,
+        "flags": flags,
         "low_info": signal < 36 or dominance > 0.48 or max_run >= 6 or repeated or (latin_run and not scene),
     }
 
@@ -823,6 +883,18 @@ def _review_open_answer_quality(open_answers):
     ]
     total_signal = sum(signal["signal"] for _, signal in reviewed)
     average_score = round(sum(signal["score"] for _, signal in reviewed) / len(reviewed)) if reviewed else 0
+    flag_counts = {}
+    item_summaries = []
+    for item, signal in reviewed:
+        for flag in signal.get("flags", []):
+            flag_counts[flag] = flag_counts.get(flag, 0) + 1
+        item_summaries.append({
+            "id": (item or {}).get("display_id") or (item or {}).get("id") or "",
+            "score": signal["score"],
+            "signal": signal["signal"],
+            "flags": signal.get("flags", []),
+            "low_info": signal["low_info"],
+        })
     return {
         "ok": len(valid) >= 2 and average_score >= 45 and total_signal >= 120,
         "valid_answers": valid,
@@ -830,10 +902,18 @@ def _review_open_answer_quality(open_answers):
         "total_count": len(reviewed),
         "average_score": average_score,
         "total_signal": total_signal,
+        "quality_flags": {
+            "valid_count": len(valid),
+            "total_count": len(reviewed),
+            "average_score": average_score,
+            "total_signal": total_signal,
+            "flag_counts": flag_counts,
+            "items": item_summaries,
+        },
     }
 
 
-def _fallback_analysis(traditional_type, identity, details, open_answers):
+def _fallback_analysis(traditional_type, identity, details, open_answers, quality_review=None):
     """Generate a fallback analysis from profile data when DeepSeek is unreachable."""
     full_type = f"{traditional_type}-{identity}"
     profile = questions_data.get("type_profiles", {}).get(traditional_type, {})
@@ -864,8 +944,10 @@ def _fallback_analysis(traditional_type, identity, details, open_answers):
         "agreement": "medium",
         "ai_available": False,
         "is_fallback": True,
+        "analysis_status": "fallback",
         "ai_confidence": 60,
-        "answer_quality_score": 50,
+        "answer_quality_score": _safe_int((quality_review or {}).get("average_score"), 50) or 50,
+        "quality_flags": (quality_review or {}).get("quality_flags", {}),
         "insufficient_evidence_dims": [],
         "differences": ["AI 深度分析暂不可用，无法对比差异。请稍后重试或检查 API 配置。"],
         "dimension_analysis": dim_analysis,
@@ -1094,6 +1176,7 @@ def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
         "career_hints": parsed.get("career_hints", []),
         "core_tension": core_tension,
         "ai_available": True,
+        "analysis_status": "ai_reviewed",
         "is_fallback": False,
     }
 
@@ -1108,10 +1191,14 @@ def analyze_with_ai(traditional_type, identity, details, open_answers):
         raise ValueError("开放题信息量还不够，暂不进入 AI 分析。请至少补充 2 道包含真实场景、选择或想法过程的回答。")
     filtered = review["valid_answers"]
     try:
-        return _analyze_with_deepseek(traditional_type, identity, details, filtered)
+        result = _analyze_with_deepseek(traditional_type, identity, details, filtered)
+        result["quality_flags"] = review["quality_flags"]
+        result["analysis_status"] = "ai_reviewed"
+        result["answer_quality_score"] = _safe_int(result.get("answer_quality_score"), review["average_score"]) or review["average_score"]
+        return result
     except Exception as e:
         traceback.print_exc()
-        return _fallback_analysis(traditional_type, identity, details, open_answers)
+        return _fallback_analysis(traditional_type, identity, details, open_answers, review)
 
 
 # ═══════════════════════════════════════════
@@ -1164,10 +1251,15 @@ def handle_sample_submit():
         return str(exc), 400, {"Content-Type": "text/plain; charset=utf-8"}
 
     status, body = create_row("persona_response_samples", row)
+    warning = ""
+    if status >= 300 and _looks_like_missing_sample_metadata_columns(body):
+        status, body = create_row("persona_response_samples", _legacy_sample_row(row))
+        if status < 300:
+            warning = "Supabase metadata columns are missing; stored using legacy sample shape."
     if status >= 300:
         detail = body if isinstance(body, dict) else {"error": "Supabase write failed"}
         return json_response({"ok": False, "error": "Supabase write failed", "detail": detail}, status)
-    return json_response({"ok": True, "sample_id": row["sample_id"], "stored": "supabase"})
+    return json_response({"ok": True, "sample_id": row["sample_id"], "stored": "supabase", "warning": warning})
 
 
 @app.route("/api/studio/auth/login", methods=["POST"])

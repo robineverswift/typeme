@@ -86,12 +86,16 @@ create table if not exists public.persona_response_samples (
   sample_id text not null unique,
   schema_version text not null default 'persona_sample_v1',
   app_version text,
+  client_version text,
   question_version text,
   prompt_version text,
+  source_locale text,
+  analysis_status text not null default 'unknown',
   final_type text,
   traditional_type text,
   ai_type text,
   answer_quality_score integer,
+  quality_flags jsonb not null default '{}'::jsonb,
   consent_scope text not null default 'anonymous_research',
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
@@ -118,6 +122,8 @@ create index if not exists prompt_versions_name_active_idx on public.prompt_vers
 create index if not exists prompt_versions_is_active_idx on public.prompt_versions (is_active);
 create index if not exists persona_response_samples_final_type_idx on public.persona_response_samples (final_type);
 create index if not exists persona_response_samples_created_at_idx on public.persona_response_samples (created_at desc);
+create index if not exists persona_response_samples_analysis_status_idx on public.persona_response_samples (analysis_status);
+create index if not exists persona_response_samples_quality_flags_gin_idx on public.persona_response_samples using gin (quality_flags);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -156,6 +162,8 @@ alter table public.persona_types enable row level security;
 alter table public.persona_visual_presets enable row level security;
 alter table public.prompt_versions enable row level security;
 alter table public.persona_response_samples enable row level security;
+
+grant select, insert, update, delete on public.persona_response_samples to service_role;
 
 -- No public policies yet. The app should use server-side access only.
 -- Future Studio policies must be added after authentication is implemented.
