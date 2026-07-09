@@ -1194,26 +1194,28 @@
     }
     if (!(await personaConfirmLeaveFlow(route))) return;
     if (route === "home") {
+      document.body.classList.add("persona-production-route");
+      document.body.classList.remove("persona-route-transition");
       window.go("home");
       return;
     }
     if ((route === "theory" || route === "library") && !(await ensureTypeMeQuestions())) return;
     if (route === "theory") {
-      personaTransition(() => {
-        if (typeof originalGo === "function") originalGo("theory");
-        renderTypeMeMethodPage();
-        syncTypeMeTopChrome("theory");
-        typeMeWriteHistory("theory");
-      });
+      document.body.classList.add("persona-production-route");
+      document.body.classList.remove("persona-route-transition");
+      if (typeof originalGo === "function") originalGo("theory");
+      renderTypeMeMethodPage();
+      syncTypeMeTopChrome("theory");
+      typeMeWriteHistory("theory");
       return;
     }
     if (route === "library") {
-      personaTransition(() => {
-        if (typeof originalGo === "function") originalGo("library");
-        renderTypeLibraryPage();
-        syncTypeMeTopChrome("library");
-        typeMeWriteHistory("library");
-      });
+      document.body.classList.add("persona-production-route");
+      document.body.classList.remove("persona-route-transition");
+      if (typeof originalGo === "function") originalGo("library");
+      renderTypeLibraryPage();
+      syncTypeMeTopChrome("library");
+      typeMeWriteHistory("library");
     }
   }
 
@@ -1418,17 +1420,18 @@
       typeMeWriteHistory(route);
       return;
     }
-    const current = document.querySelector(".screen.active")?.id || "";
     const isTypeMeRoute = ["home", "theory", "library"].includes(route);
-    const shouldAnimate = isTypeMeRoute && !current.endsWith(route);
     const run = () => {
+      if (isTypeMeRoute) {
+        document.body.classList.add("persona-production-route");
+        document.body.classList.remove("persona-route-transition");
+      }
       if (typeof originalGo === "function") originalGo(route);
       if (route === "home") renderHomeTypePreview();
       syncTypeMeTopChrome(route);
       typeMeWriteHistory(route);
     };
-    if (shouldAnimate) personaTransition(run);
-    else run();
+    run();
   }
   window.go = typeMeGo;
   try { go = typeMeGo; } catch {}

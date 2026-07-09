@@ -407,6 +407,11 @@ body.typeme-ui-active .screen.active{
 body.typeme-ui-active.persona-route-transition .screen.active{
   animation:typeMeRouteIn .46s var(--persona-ease) both;
 }
+body.typeme-ui-active.persona-production-route #screen-home.screen.active,
+body.typeme-ui-active.persona-production-route #screen-theory.screen.active,
+body.typeme-ui-active.persona-production-route #screen-library.screen.active{
+  animation:none!important;
+}
 .persona-production{
   max-width:1180px;
   margin:auto;
