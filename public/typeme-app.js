@@ -1188,9 +1188,13 @@
       await window.startTest();
       return;
     }
+    if (typeMeCanSkipRouteRender(route)) {
+      personaSetActiveRoute(route);
+      return;
+    }
     if (!(await personaConfirmLeaveFlow(route))) return;
     if (route === "home") {
-      personaTransition(() => window.go("home"));
+      window.go("home");
       return;
     }
     if ((route === "theory" || route === "library") && !(await ensureTypeMeQuestions())) return;
@@ -1346,6 +1350,20 @@
     window.history[method]({ typeMeRoute: route }, "", nextUrl);
   }
 
+  function typeMeActiveScreenRoute() {
+    const id = document.querySelector(".screen.active")?.id || "";
+    return id.startsWith("screen-") ? id.slice(7) : "";
+  }
+
+  function typeMeCanSkipRouteRender(route) {
+    if (!["home", "theory", "library"].includes(route)) return false;
+    if (typeMeActiveScreenRoute() !== route) return false;
+    const screen = $id(`screen-${route}`);
+    if (!screen) return false;
+    if (route === "home") return screen.dataset.personaMounted === "1";
+    return screen.children.length > 0;
+  }
+
   async function typeMeRestoreHistoryRoute(route) {
     const target = typeMeHistoryRoutes.has(route) ? route : "home";
     typeMeHandlingHistory = true;
@@ -1395,11 +1413,15 @@
   }
 
   function typeMeGo(route) {
+    if (typeMeCanSkipRouteRender(route)) {
+      personaSetActiveRoute(route);
+      typeMeWriteHistory(route);
+      return;
+    }
     const current = document.querySelector(".screen.active")?.id || "";
     const isTypeMeRoute = ["home", "theory", "library"].includes(route);
     const shouldAnimate = isTypeMeRoute && !current.endsWith(route);
     const run = () => {
-      if (route === "home") renderHomeTypePreview();
       if (typeof originalGo === "function") originalGo(route);
       if (route === "home") renderHomeTypePreview();
       syncTypeMeTopChrome(route);
