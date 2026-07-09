@@ -199,6 +199,17 @@
       sampleSavedDb: "样本已匿名保存到数据库。",
       sampleSavedLocal: "样本已匿名保存到本地样本目录；数据库配置完成后可再同步。",
       sampleFailedTitle: "提交失败",
+      savedLocalToast: "已保存到本机",
+      scaleSavedToast: "量表结果已保存",
+      processing: "处理中",
+      submittingAnalysis: "提交中",
+      savingSample: "保存中",
+      sampleSubmitted: "已提交",
+      aiLoadingSavedCopy: "已保存到本机，正在请求 AI 复核。请勿刷新或离开本页。",
+      aiUnloadWarning: "AI 分析仍在进行，离开会中断本次请求，但已填写内容会保存在本机。",
+      aiCompleteToast: "AI 复核已完成",
+      aiFallbackToast: "AI 暂不可用，已保留量表结果",
+      localeChangedToast: "语言已切换",
       feedbackPrompt: "写下你遇到的 bug、卡顿、看不懂的地方，或你希望改进的体验。",
       feedbackBodyLabel: "反馈内容：",
       feedbackPageLabel: "页面信息：",
@@ -375,6 +386,17 @@
       sampleSavedDb: "The sample was saved anonymously to the database.",
       sampleSavedLocal: "The sample was saved anonymously to the local sample folder. It can be synced after database configuration is ready.",
       sampleFailedTitle: "Submission failed",
+      savedLocalToast: "Saved on this device",
+      scaleSavedToast: "Scale result saved",
+      processing: "Processing",
+      submittingAnalysis: "Submitting",
+      savingSample: "Saving",
+      sampleSubmitted: "Submitted",
+      aiLoadingSavedCopy: "Saved locally. Requesting AI review now. Please do not refresh or leave this page.",
+      aiUnloadWarning: "AI review is still running. Leaving will interrupt this request, but your answers are saved locally.",
+      aiCompleteToast: "AI review complete",
+      aiFallbackToast: "AI is unavailable; the scale result was kept",
+      localeChangedToast: "Language switched",
       feedbackPrompt: "Describe the bug, confusing text, lag, or experience you want improved.",
       feedbackBodyLabel: "Feedback:",
       feedbackPageLabel: "Page info:",
@@ -1828,6 +1850,9 @@
   }
 
   async function personaContributeSample() {
+    const button = document.querySelector(".persona-result-actions button[onclick='contributePersonaSample()']");
+    if (button?.dataset.submitted === "1" || button?.classList.contains("is-busy")) return;
+    const oldText = button?.textContent || "";
     try {
       const ok = typeof window.modal === "function"
         ? await window.modal(t("sampleConsentCopy"), {
@@ -1836,6 +1861,11 @@
         })
         : confirm(t("sampleConsentTitle"));
       if (!ok) return;
+      if (button) {
+        button.classList.add("is-busy");
+        button.disabled = true;
+        button.textContent = t("savingSample");
+      }
       const payload = personaBuildSamplePayload();
       const response = await fetch("/api/samples", {
         method: "POST",
@@ -1847,9 +1877,21 @@
       const text = data.stored === "supabase"
         ? t("sampleSavedDb")
         : t("sampleSavedLocal");
+      if (button) {
+        button.dataset.submitted = "1";
+        button.classList.remove("is-busy");
+        button.disabled = true;
+        button.textContent = t("sampleSubmitted");
+      }
+      if (typeof window.appToast === "function") window.appToast(text);
       if (typeof window.modal === "function") await window.modal(text, { title: t("sampleSavedTitle"), only: true, ok: t("ok") });
       else alert(text);
     } catch (error) {
+      if (button) {
+        button.classList.remove("is-busy");
+        button.disabled = false;
+        button.textContent = oldText;
+      }
       if (typeof window.modal === "function") await window.modal(error.message, { title: t("sampleFailedTitle"), only: true, ok: t("ok") });
       else alert(error.message);
     }
@@ -2158,6 +2200,7 @@
     try { localStorage.setItem(TYPEME_LOCALE_KEY, locale); } catch {}
     closeTypeMeLanguageMenu();
     rerenderTypeMeLocaleSurface();
+    if (typeof window.appToast === "function") window.appToast(t("localeChangedToast"));
     warnIfSavedAnalysisNeedsRegeneration();
   }
   window.setTypeMeLocale = setTypeMeLocale;
