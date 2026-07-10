@@ -1017,7 +1017,14 @@
   async function ensureTypeMeQuestions() {
     if (typeMeQuestions) return true;
     if (typeof window.load === "function") {
-      try { await window.load(); } catch {}
+      try {
+        const loaded = await window.load();
+        const sharedQuestions = window.getTypeMeQuestions?.();
+        if (loaded && sharedQuestions) {
+          typeMeQuestions = sharedQuestions;
+          return true;
+        }
+      } catch {}
     }
     try {
       const response = await fetch("/api/questions", { cache: "no-store" });
@@ -1182,41 +1189,43 @@
       </div>`;
   }
 
-  async function navigateTypeMeRoute(route) {
-    if (route === "test") {
-      if (!(await ensureTypeMeQuestions())) return;
-      await window.startTest();
-      return;
+  async function navigateTypeMeRoute(route, options = {}) {
+    const target = typeMeHistoryRoutes.has(route) ? route : "home";
+    const restoring = options.restoring === true;
+    if (!restoring && !(await personaConfirmLeaveFlow(target))) return null;
+
+    if (["theory", "library", "test", "bridge", "open", "results"].includes(target)
+      && !(await ensureTypeMeQuestions())) return null;
+
+    const state = personaGlobalState();
+    if (target === "test") {
+      if (restoring && state?.answers?.length && typeof window.renderPage === "function") {
+        window.renderPage(state.page || 0);
+      } else if (typeof window.startTest === "function") {
+        await window.startTest();
+      }
+      return "test";
     }
-    if (typeMeCanSkipRouteRender(route)) {
-      personaSetActiveRoute(route);
-      return;
+    if (target === "bridge" && state?.traditional && typeof window.renderBridge === "function") {
+      window.renderBridge();
+      return "bridge";
     }
-    if (!(await personaConfirmLeaveFlow(route))) return;
-    if (route === "home") {
-      document.body.classList.add("persona-production-route");
-      document.body.classList.remove("persona-route-transition");
-      window.go("home");
-      return;
+    if (target === "open" && state?.traditional && typeof window.renderOpen === "function") {
+      window.renderOpen(state.openIndex || 0);
+      return "open";
     }
-    if ((route === "theory" || route === "library") && !(await ensureTypeMeQuestions())) return;
-    if (route === "theory") {
-      document.body.classList.add("persona-production-route");
-      document.body.classList.remove("persona-route-transition");
-      if (typeof originalGo === "function") originalGo("theory");
-      renderTypeMeMethodPage();
-      syncTypeMeTopChrome("theory");
-      typeMeWriteHistory("theory");
-      return;
+    if (target === "results" && state?.traditional && typeof window.renderResults === "function") {
+      const verified = typeof window.hasVerifiedAI === "function" ? window.hasVerifiedAI(state.ai) : !!state.ai;
+      window.renderResults(verified, restoring);
+      return "results";
     }
-    if (route === "library") {
-      document.body.classList.add("persona-production-route");
-      document.body.classList.remove("persona-route-transition");
-      if (typeof originalGo === "function") originalGo("library");
-      renderTypeLibraryPage();
-      syncTypeMeTopChrome("library");
-      typeMeWriteHistory("library");
+    if (["bridge", "open", "results"].includes(target)) {
+      typeMeGo("home");
+      return "home";
     }
+
+    typeMeGo(target);
+    return target;
   }
 
   function personaTransition(work) {
@@ -1343,11 +1352,11 @@
     return url;
   }
 
-  function typeMeWriteHistory(route) {
+  function typeMeWriteHistory(route, mode = "auto") {
     if (typeMeHandlingHistory || !typeMeHistoryRoutes.has(route) || !window.history?.pushState) return;
     const nextUrl = typeMeUrlForRoute(route);
     const currentRoute = window.history.state?.typeMeRoute;
-    const method = currentRoute ? "pushState" : "replaceState";
+    const method = mode === "replace" ? "replaceState" : currentRoute ? "pushState" : "replaceState";
     if (currentRoute === route && window.location.hash === nextUrl.hash) return;
     window.history[method]({ typeMeRoute: route }, "", nextUrl);
   }
@@ -1370,45 +1379,7 @@
     const target = typeMeHistoryRoutes.has(route) ? route : "home";
     typeMeHandlingHistory = true;
     try {
-      if (target === "home") {
-        typeMeGo("home");
-        return;
-      }
-      if (target === "theory") {
-        if (await ensureTypeMeQuestions()) {
-          renderTypeMeMethodPage();
-          if (typeof originalGo === "function") originalGo("theory");
-          syncTypeMeTopChrome("theory");
-        }
-        return;
-      }
-      if (target === "library") {
-        if (await ensureTypeMeQuestions()) {
-          renderTypeLibraryPage();
-          if (typeof originalGo === "function") originalGo("library");
-          syncTypeMeTopChrome("library");
-        }
-        return;
-      }
-      const state = personaGlobalState();
-      if (target === "test" && typeof window.renderPage === "function") {
-        if (await ensureTypeMeQuestions()) window.renderPage(state?.page || 0);
-        return;
-      }
-      if (target === "bridge" && state?.traditional && typeof window.renderBridge === "function") {
-        window.renderBridge();
-        return;
-      }
-      if (target === "open" && state?.traditional && typeof window.renderOpen === "function") {
-        window.renderOpen(state?.openIndex || 0);
-        return;
-      }
-      if (target === "results" && state?.traditional && typeof window.renderResults === "function") {
-        const verified = typeof window.hasVerifiedAI === "function" ? window.hasVerifiedAI(state.ai) : !!state.ai;
-        window.renderResults(verified, true);
-        return;
-      }
-      typeMeGo("home");
+      return await navigateTypeMeRoute(target, { restoring: true });
     } finally {
       typeMeHandlingHistory = false;
     }
@@ -1428,6 +1399,8 @@
       }
       if (typeof originalGo === "function") originalGo(route);
       if (route === "home") renderHomeTypePreview();
+      if (route === "theory") renderTypeMeMethodPage();
+      if (route === "library") renderTypeLibraryPage();
       syncTypeMeTopChrome(route);
       typeMeWriteHistory(route);
     };
@@ -1447,9 +1420,7 @@
   try { renderTheory = personaRenderTheory; } catch {}
 
   async function personaShowTheory() {
-    if (!(await ensureTypeMeQuestions())) return;
-    renderTypeMeMethodPage();
-    window.go("theory");
+    await navigateTypeMeRoute("theory");
   }
   window.showTheory = personaShowTheory;
   try { showTheory = personaShowTheory; } catch {}
@@ -2275,19 +2246,16 @@
     if (event.key === "Escape") closeTypeMeLanguageMenu();
   });
 
-  document.body.classList.add("typeme-ui-active");
-  const bootState = personaGlobalState();
-  if (bootState?.route === "results" && bootState?.traditional) {
-    syncTypeMeTopChrome("results");
-    document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
-    const loadingScreen = $id("screen-loading");
-    if (loadingScreen) loadingScreen.classList.add("active");
-    const title = $id("loading-title");
-    const copy = $id("loading-copy");
-    if (title) title.textContent = t("restoreLoadingTitle");
-    if (copy) copy.textContent = t("restoreLoadingCopy");
-  } else {
-    syncTypeMeTopChrome("home");
-    renderHomeTypePreview();
+  async function initializeTypeMeApp() {
+    document.body.classList.add("typeme-ui-active");
+    const state = personaGlobalState();
+    const hashRoute = (window.location.hash || "").slice(1);
+    const target = typeMeHistoryRoutes.has(hashRoute)
+      ? hashRoute
+      : state?.route === "results" && state?.traditional ? "results" : "home";
+    const renderedRoute = await typeMeRestoreHistoryRoute(target) || "home";
+    typeMeWriteHistory(renderedRoute, "replace");
+    return renderedRoute;
   }
+  window.initializeTypeMeApp = initializeTypeMeApp;
 })();
