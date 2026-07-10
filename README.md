@@ -87,6 +87,7 @@ This repository is adapted for Vercel:
 
 - `api/index.py` is the Flask serverless entry point.
 - `api/templates/index.html` serves the TypeMe app shell.
+- `public/index.html` mirrors the app shell for static inspection. Frontend shell changes must update both HTML copies; production `/` reads `api/templates/index.html`.
 - `public/typeme-app.css` and `public/typeme-app.js` provide the active UI layer.
 - `questions.json` is loaded from the project root by the serverless function.
 - `public/studio.html` is served through the `/studio` rewrite.
