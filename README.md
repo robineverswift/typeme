@@ -8,6 +8,8 @@ Live demo: https://typeme-beta.vercel.app
 
 - 50 scale questions across EI, SN, TF, JP, and AT dimensions
 - Dynamic open-ended prompts selected from borderline or high-signal dimensions
+- Open-answer quality gating that blocks repeated, random, or low-information input before AI analysis
+- Browser-local progress recovery with graceful continuation when storage is unavailable
 - Type landing with confidence, adjacent candidates, and dimension coordinates
 - AI-assisted profile synthesis with fallback behavior when AI is unavailable
 - Chinese and English UI localization

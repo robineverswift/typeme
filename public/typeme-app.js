@@ -121,6 +121,8 @@
       submitSample: "提交样本（匿名）",
       improve: "帮助改进",
       continueAnalysis: "继续深度分析",
+      retryAnalysis: "重新请求 AI",
+      returnOpen: "返回补写开放题",
       restart: "重新测试",
       reference16p: "参考 16Personalities",
       ok: "确定",
@@ -172,7 +174,15 @@
       continueSubmit: "继续提交",
       openQualityGateTitle: "开放题信息还不够",
       openQualityGateCopy: "请至少补充 2 道有具体场景的回答：写发生了什么、你当时怎么想或怎么选。明显重复、乱码或模板化内容不会进入 AI 分析。",
+      qualityNeedScene: "具体场景",
+      qualityNeedCause: "前因后果",
+      qualityNeedChoice: "选择过程",
+      qualityNeedEmotion: "情绪或压力信号",
+      qualityMissingSummary: "目前更需要补充：",
       submitFailed: (message) => `提交失败：${message}`,
+      scoreFailedTitle: "量表结果暂未生成",
+      scoreFailedCopy: "50 道答案仍完整保留在本页。请检查网络后重新提交，不需要重新作答。",
+      retryScore: "重新提交量表",
       missingQuestions: (count) => `还有 ${count} 题未完成。`,
       aiUnavailableTitle: "AI 复核未完成",
       aiUnavailableCopy: "这次没有取得有效的 AI 返回，所以这里只保留量表坐标，不展示逐维交叉验证。你可以稍后重新提交开放题，或检查本地/线上 API 配置。",
@@ -181,6 +191,14 @@
       retryOpen: "重新提交开放题",
       resumeFinished: "检测到上次完成的 TypeMe 结果",
       resumeProgress: (answered) => `检测到未完成测试：${answered}/50`,
+      resumeScale: (answered, total, page) => `未完成量表：${answered}/${total}，继续第 ${page} 页`,
+      resumeScaleDone: "量表已完成，等待继续开放题",
+      resumeOpenDraft: (answered, total) => `开放题草稿：已填写 ${answered}/${total}`,
+      resumeFinal: "最终 Type Profile 已保存在本机",
+      resumeScaleCopy: "继续会回到保存的页码和当前题目。",
+      resumeScaleDoneCopy: "继续会回到初步坐标，再选择是否进入开放题。",
+      resumeOpenCopy: "继续会回到上次停下的开放题，草稿不会丢失。",
+      resumeFinalCopy: "继续可直接查看上次结果，不会重新发起分析。",
       continue: "继续",
       discard: "丢弃",
       discardConfirm: "确定丢弃上次保存的答题进度吗？",
@@ -200,6 +218,10 @@
       sampleSavedLocal: "样本已匿名保存到本地样本目录；数据库配置完成后可再同步。",
       sampleFailedTitle: "提交失败",
       savedLocalToast: "已保存到本机",
+      savingStatus: "保存中",
+      savedStatus: "已保存到本机",
+      saveFailedStatus: "本次未保存",
+      saveFailedToast: "浏览器未能保存进度，本次页面内仍可继续。",
       scaleSavedToast: "量表结果已保存",
       processing: "处理中",
       submittingAnalysis: "提交中",
@@ -308,6 +330,8 @@
       submitSample: "Submit sample",
       improve: "Help improve",
       continueAnalysis: "Continue analysis",
+      retryAnalysis: "Retry AI review",
+      returnOpen: "Edit open answers",
       restart: "Restart",
       reference16p: "Reference 16Personalities",
       ok: "OK",
@@ -359,7 +383,15 @@
       continueSubmit: "Continue",
       openQualityGateTitle: "Open answers need more signal",
       openQualityGateCopy: "Please add at least 2 concrete answers: what happened, what you thought, or what you chose. Repeated, random, or template-like text will not be sent for AI analysis.",
+      qualityNeedScene: "concrete scenes",
+      qualityNeedCause: "cause and effect",
+      qualityNeedChoice: "decision process",
+      qualityNeedEmotion: "emotion or pressure signals",
+      qualityMissingSummary: "The answers still need:",
       submitFailed: (message) => `Submit failed: ${message}`,
+      scoreFailedTitle: "The scale result is not ready yet",
+      scoreFailedCopy: "All 50 answers are still kept on this page. Check the connection and retry without answering again.",
+      retryScore: "Retry scale submission",
       missingQuestions: (count) => `${count} items are still unanswered.`,
       aiUnavailableTitle: "AI review unavailable",
       aiUnavailableCopy: "TypeMe did not receive a valid AI response this time, so it keeps the scale coordinates and does not show per-dimension verification. You can retry the open prompts later or check the API configuration.",
@@ -368,6 +400,14 @@
       retryOpen: "Retry open prompts",
       resumeFinished: "A previous TypeMe result was found",
       resumeProgress: (answered) => `Unfinished test found: ${answered}/50`,
+      resumeScale: (answered, total, page) => `Unfinished scale: ${answered}/${total}. Continue on page ${page}`,
+      resumeScaleDone: "Scale complete; open prompts are next",
+      resumeOpenDraft: (answered, total) => `Open-answer draft: ${answered}/${total} completed`,
+      resumeFinal: "The final Type Profile is saved on this device",
+      resumeScaleCopy: "Continue returns to the saved page and current question.",
+      resumeScaleDoneCopy: "Continue returns to the initial coordinates before the open prompts.",
+      resumeOpenCopy: "Continue returns to the saved open prompt without losing the draft.",
+      resumeFinalCopy: "Continue opens the saved result without requesting analysis again.",
       continue: "Continue",
       discard: "Discard",
       discardConfirm: "Discard the previously saved progress?",
@@ -387,6 +427,10 @@
       sampleSavedLocal: "The sample was saved anonymously to the local sample folder. It can be synced after database configuration is ready.",
       sampleFailedTitle: "Submission failed",
       savedLocalToast: "Saved on this device",
+      savingStatus: "Saving",
+      savedStatus: "Saved locally",
+      saveFailedStatus: "Not saved",
+      saveFailedToast: "The browser could not save progress. You can still continue on this page.",
       scaleSavedToast: "Scale result saved",
       processing: "Processing",
       submittingAnalysis: "Submitting",
@@ -1137,8 +1181,31 @@
   }
 
   function renderFamilyFilter() {
-    const filters = [["all", t("filterAll")], ...Object.keys(families).map((id) => [id, localizedFamily(id).label])];
-    return `<div class="persona-family-filter">${filters.map(([id, label]) => `<button type="button" data-persona-family="${id}" class="${id === activeFamily ? "is-active" : ""}">${label}</button>`).join("")}</div>`;
+    const total = Object.values(families).reduce((sum, family) => sum + family.types.length, 0);
+    const filters = [["all", t("filterAll"), total], ...Object.keys(families).map((id) => [id, localizedFamily(id).label, families[id].types.length])];
+    const ariaLabel = isEnLocale() ? "Filter type families" : "筛选类型家族";
+    return `<div class="persona-family-filter" role="group" aria-label="${escHtml(ariaLabel)}">${filters.map(([id, label, count]) => `<button type="button" data-persona-family="${id}" class="${id === activeFamily ? "is-active" : ""}" aria-pressed="${id === activeFamily ? "true" : "false"}" aria-label="${escHtml(`${label} · ${t("typesCount", count)}`)}"><span>${escHtml(label)}</span><small aria-hidden="true">${count}</small></button>`).join("")}</div>`;
+  }
+
+  function renderTypeLibraryCards(profiles) {
+    const allTypes = Object.values(families).flatMap((family) => family.types);
+    const visibleTypes = allTypes.filter((type) => activeFamily === "all" || familyId(type) === activeFamily);
+    return visibleTypes.map((type) => {
+      const profile = localizedTypeProfile(type, profiles[type] || {});
+      const fid = familyId(type);
+      const tags = axisTags(type);
+      const note = localizedFamily(fid);
+      return `
+        <button class="persona-type-card persona-family-${fid}" type="button" onclick="openType('${type}')">
+          <span class="persona-family-badge">${familyName(type)}</span>
+          <span class="persona-type-asset"><b>${type.slice(0, 2)}</b><em>${type.slice(2)}</em></span>
+          <span class="persona-type-code">${type}</span>
+          <h3>${escHtml(profile.nickname || type)}</h3>
+          <p>${escHtml(profile.description || "")}</p>
+          <div class="persona-type-tags">${tags.slice(0, 4).map((tag) => `<span>${escHtml(tag)}</span>`).join("")}</div>
+          <small class="persona-type-note">${escHtml(note.tone || "")}</small>
+        </button>`;
+    }).join("");
   }
 
   function renderTypeLibraryPage() {
@@ -1146,8 +1213,6 @@
     const screen = $id("screen-library");
     if (!screen) return;
     const profiles = typeMeQuestions.type_profiles || {};
-    const allTypes = Object.values(families).flatMap((family) => family.types);
-    const visibleTypes = allTypes.filter((type) => activeFamily === "all" || familyId(type) === activeFamily);
     screen.innerHTML = `
       <div class="persona-production">
         <header class="persona-page-head">
@@ -1158,33 +1223,8 @@
           </div>
           ${renderFamilyFilter()}
         </header>
-        <section class="persona-family-overview" aria-label="${escHtml(isEnLocale() ? "Type family overview" : "类型家族概览")}">
-          ${Object.entries(families).map(([fid, family]) => {
-            const note = localizedFamily(fid);
-            return `<button type="button" class="persona-family-tile persona-family-${fid} ${activeFamily === fid ? "is-active" : ""}" onclick="filterPersonaFamily('${fid}')">
-              <span>${escHtml(note.label || family.label)}</span>
-              <strong>${escHtml(t("typesCount", family.types.length))}</strong>
-              <p>${escHtml(note.tone || "")}</p>
-            </button>`;
-          }).join("")}
-        </section>
         <section id="types" class="persona-type-grid">
-          ${visibleTypes.map((type) => {
-            const profile = localizedTypeProfile(type, profiles[type] || {});
-            const fid = familyId(type);
-            const tags = axisTags(type);
-            const note = localizedFamily(fid);
-            return `
-              <button class="persona-type-card persona-family-${fid}" type="button" onclick="openType('${type}')">
-                <span class="persona-family-badge">${familyName(type)}</span>
-                <span class="persona-type-asset"><b>${type.slice(0, 2)}</b><em>${type.slice(2)}</em></span>
-                <span class="persona-type-code">${type}</span>
-                <h3>${escHtml(profile.nickname || type)}</h3>
-                <p>${escHtml(profile.description || "")}</p>
-                <div class="persona-type-tags">${tags.slice(0, 4).map((tag) => `<span>${escHtml(tag)}</span>`).join("")}</div>
-                <small class="persona-type-note">${escHtml(note.tone || "")}</small>
-              </button>`;
-          }).join("")}
+          ${renderTypeLibraryCards(profiles)}
         </section>
       </div>`;
   }
@@ -1445,6 +1485,7 @@
     if (!raw) {
       banner.classList.remove("active");
       banner.innerHTML = "";
+      delete banner.dataset.resumeStage;
       return;
     }
     let data;
@@ -1454,20 +1495,35 @@
     } catch {
       banner.classList.remove("active");
       banner.innerHTML = "";
+      delete banner.dataset.resumeStage;
       return;
     }
     if (!(data.answers || []).length) {
       banner.classList.remove("active");
       banner.innerHTML = "";
+      delete banner.dataset.resumeStage;
       return;
     }
     const answered = (data.answers || []).length;
-    const title = isEnLocale()
-      ? (data.traditional ? "Your last result is still here" : `Last progress: ${answered}/50`)
-      : (data.traditional ? "上次的结果还在" : `上次答到 ${answered}/50`);
-    const copy = isEnLocale()
-      ? (data.traditional ? "Continue to view it, or discard it and start again." : "Continue returns to where you stopped.")
-      : (data.traditional ? "可以继续查看结果，也可以丢弃后重新开始。" : "继续会回到上次停下的位置。");
+    const stage = typeof window.savedJourneyStage === "function"
+      ? window.savedJourneyStage(data)
+      : { key: data.ai ? "result" : data.traditional ? "scaleDone" : "scale", openCount: 0 };
+    const totalOpen = data.traditional?.selected_questions?.length || 5;
+    const titleByStage = {
+      scale: t("resumeScale", answered, 50, Number(data.page || 0) + 1),
+      scaleDone: t("resumeScaleDone"),
+      open: t("resumeOpenDraft", stage.openCount, totalOpen),
+      result: t("resumeFinal"),
+    };
+    const copyByStage = {
+      scale: t("resumeScaleCopy"),
+      scaleDone: t("resumeScaleDoneCopy"),
+      open: t("resumeOpenCopy"),
+      result: t("resumeFinalCopy"),
+    };
+    const title = titleByStage[stage.key];
+    const copy = copyByStage[stage.key];
+    banner.dataset.resumeStage = stage.key;
     banner.innerHTML = `
       <span class="persona-resume-mark">P</span>
       <div class="persona-resume-copy"><strong>${escHtml(title)}</strong><span>${escHtml(copy)}</span></div>
@@ -1647,10 +1703,10 @@
       ? (isEnLocale() ? "REVIEW STATUS" : "复核状态")
       : (isEnLocale() ? "SCALE PROFILE" : "量表档案");
     const title = hasFallback
-      ? (isEnLocale() ? "AI review was not completed" : "AI 复核未完成")
+      ? t("aiUnavailableTitle")
       : (isEnLocale() ? "This is the scale profile" : "这是量表档案");
     const copy = hasFallback
-      ? (isEnLocale() ? "TypeMe did not receive a usable AI response this time, so it only shows scale coordinates and type information." : "这次没有取得有效 AI 返回，所以结果只展示量表坐标和类型资料，不显示逐维交叉验证。")
+      ? t("aiUnavailableCopy")
       : (isEnLocale() ? "The scale has produced an initial type. After open answers, TypeMe can compare your real-life choices with the scale coordinates." : "量表已经给出初始类型。继续回答开放题后，系统会把真实场景里的选择和量表坐标放在一起对照。");
     return `
       <section class="persona-result-block persona-result-warning">
@@ -1932,6 +1988,7 @@
     const base = String(type || "").toLowerCase();
     const state = personaGlobalState();
     const canContinueOpen = !!state?.traditional?.selected_questions?.length;
+    const hasFallback = !!(state?.ai && (state.ai.ai_available === false || state.ai.is_fallback));
     const reportActions = verified
       ? `
         <button class="typeme-action secondary" type="button" onclick="exportPersonaReport()">${escHtml(t("exportReport"))}</button>
@@ -1939,7 +1996,9 @@
         ${state?.ai ? `<button class="typeme-action ghost" type="button" onclick="contributePersonaSample()">${escHtml(t("submitSample"))}</button>` : ""}
         <button class="typeme-action ghost" type="button" onclick="personaOpenFeedback()">${escHtml(t("improve"))}</button>
       `
-      : `${canContinueOpen ? `<button class="typeme-action secondary" type="button" onclick="startOpen()">${escHtml(t("continueAnalysis"))}</button>` : ""}`;
+      : hasFallback
+        ? `<button class="typeme-action secondary typeme-retry-analysis" type="button" onclick="retryOpenAnalysis(this)">${escHtml(t("retryAnalysis"))}</button><button class="typeme-action ghost" type="button" onclick="returnToOpenAnswers()">${escHtml(t("returnOpen"))}</button>`
+        : `${canContinueOpen ? `<button class="typeme-action secondary" type="button" onclick="startOpen()">${escHtml(t("continueAnalysis"))}</button>` : ""}`;
     return `
       <section class="persona-result-actions">
         <span>${escHtml(meta.title)}</span>
@@ -2074,8 +2133,21 @@
   window.renderResults = personaRenderResults;
   try { renderResults = personaRenderResults; } catch {}
   function personaFilterFamily(id) {
-    activeFamily = id || "all";
-    renderTypeLibraryPage();
+    const nextFamily = id === "all" || families[id] ? id : "all";
+    if (nextFamily === activeFamily) return;
+    activeFamily = nextFamily;
+    const screen = $id("screen-library");
+    const grid = screen?.querySelector("#types");
+    if (!screen || !grid || !typeMeQuestions) {
+      renderTypeLibraryPage();
+      return;
+    }
+    screen.querySelectorAll("[data-persona-family]").forEach((button) => {
+      const selected = button.dataset.personaFamily === activeFamily;
+      button.classList.toggle("is-active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    grid.innerHTML = renderTypeLibraryCards(typeMeQuestions.type_profiles || {});
   }
   window.filterPersonaFamily = personaFilterFamily;
 
