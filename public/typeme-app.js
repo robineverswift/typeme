@@ -43,53 +43,57 @@
       navGuide: "说明",
       navLibrary: "类型库",
       langCurrent: "简体中文",
+      brandSubtitle: "MBTI 人格测试",
+      homeAria: "TypeMe 首页",
+      navAria: "TypeMe 导航",
+      pageTitle: "TypeMe 人格测试",
       homeKicker: "TypeMe · MBTI 人格测试",
       homeTitle: "找到更接近你的 16 型人格画像。",
-      homeLead: "先回答一组量表题，再写几道贴近生活的开放题。TypeMe 会交叉观察你的倾向、冲突和表达方式，生成一份更清晰的类型档案。",
+      homeLead: "先回答一组量表题，再写几道贴近生活的开放题。TypeMe 会结合你的选择和真实经历，给出更贴近你的测试结果。",
       startTest: "开始测试",
       browseTypes: "浏览类型库",
       readGuide: "了解说明",
-      processScale: "50 量表题",
-      processPrompt: "5 个追问",
-      processCheck: "AI 交叉分析",
-      processProfile: "类型档案",
-      summaryCoordinateKicker: "坐标",
+      processScale: "50 道量表题",
+      processPrompt: "5 道开放题",
+      processCheck: "结合回答分析",
+      processProfile: "完整结果",
+      summaryCoordinateKicker: "维度",
       summaryEvidenceKicker: "证据",
-      summaryProfileKicker: "档案",
-      summaryCoordinateTitle: "保留比例",
+      summaryProfileKicker: "结果",
+      summaryCoordinateTitle: "查看五个维度",
       summaryCoordinateCopy: "E/I、S/N、T/F、J/P、A/T 都会留下百分比，不急着把你压成四个字母。",
       summaryEvidenceTitle: "看具体场景",
       summaryEvidenceCopy: "开放题会追问压力、关系和选择。很多误判，都是在这些地方露出来的。",
-      summaryProfileTitle: "生成类型档案",
-      summaryProfileCopy: "结果会落到明确类型，同时保留相邻气质、接近度和后续可读的解释。",
+      summaryProfileTitle: "得到完整结果",
+      summaryProfileCopy: "你会看到最接近的类型、相邻可能，以及这些判断来自哪些回答。",
       guideKicker: "说明",
       guideTitle: "测试前，你可以先知道这些。",
       guideLead: "TypeMe 是一个 16 型人格测试工具，不是临床诊断。它先用量表建立初始坐标，再用开放题补充真实场景里的选择、犹豫和压力反应。",
       guideAsideTitle: "你会得到什么",
-      guideAsideStrong: "类型落点 · 维度比例 · 开放题证据 · 后续建议",
+      guideAsideStrong: "最接近的类型 · 维度比例 · 回答依据 · 后续建议",
       guideAsideCopy: "结果会给出一个明确的类型，同时保留那些接近边界的可能性。",
       guideCards: [
         ["01", "先做量表", "50 道题负责建立初始类型坐标。它看的是倾向的相对强弱，不是给你打分。"],
         ["02", "再写开放题", "开放题会落在更具体的生活场景里：压力、关系、冲突、临时变化和自我评价。"],
         ["03", "看接近度", "百分比表示当前资料对某个类型的接近程度。候选比例接近时，说明某些维度还没有明显拉开。"],
-        ["04", "读类型档案", "最终结果会把类型落点、相邻可能、回答证据和一段更有人情味的收束放在一起。"],
+        ["04", "查看完整结果", "最终结果会告诉你最接近的类型、相邻可能和回答中透露出的个人特点。"],
       ],
       guideNotes: [
         ["怎么读结果", "先看类型落点，再看哪些维度接近中线。越接近中线，越适合回到开放题里看真实场景。"],
         ["隐私与样本", "答题内容默认保存在本机。只有你主动点击“提交样本（匿名）”时，才会用于帮助改进。"],
         ["什么时候重测", "生活阶段、压力来源或关系模式明显变化后，再测一次通常比连续刷题更有意义。"],
       ],
-      dimsTitle: "五维坐标",
+      dimsTitle: "五个维度",
       libraryKicker: "类型库",
       libraryTitle: "浏览 TypeMe 使用的 16 种人格类型。",
       libraryLead: "这里用于快速了解每种类型的倾向、家族、关键词和基础描述。正式测试结果会叠加 A/T 身份维度、接近度和开放题证据。",
       filterAll: "全部",
       typesCount: (count) => `${count} 个类型`,
-      typeLandingTitle: "类型落点",
+      typeLandingTitle: "最接近的类型",
       typeLandingCopy: (full) => `你的类型气质更接近 ${full}。百分比表示当前资料对该类型的接近程度；如果下方出现比例相近的候选落点，说明某些维度还没有明显拉开，结果会把这些临近可能一起保留下来。`,
-      coordinatesTitle: "量表坐标",
+      coordinatesTitle: "维度比例",
       coordinatesCopyVerified: "量表给出初始比例，开放题负责观察其中的吻合与张力。",
-      coordinatesCopyFallback: "这里保留量表坐标；AI 复核未完成时，不展示逐维验证结论。",
+      coordinatesCopyFallback: "这里保留量表结果。开放题分析未完成，因此暂不显示进一步解读。",
       restoredCopy: "这是本机保存的上次结果。",
       navCoordinates: "坐标",
       navEvidence: "证据",
@@ -99,11 +103,11 @@
       afterwordTitle: (type) => `给 ${type} 型的你的悄悄话`,
       navTop: "顶部",
       credibilityTitle: "结果可信度",
-      credibilityReviewed: "AI 已完成开放题复核",
-      credibilityFallback: "AI 复核未完成，仅展示量表档案",
-      credibilitySignal: "开放题信号",
-      credibilityValid: (valid, total) => `${valid}/${total} 道可用于复核`,
-      credibilityFlags: "信号标签",
+      credibilityReviewed: "开放题已纳入分析",
+      credibilityFallback: "开放题分析未完成，仅展示量表结果",
+      credibilitySignal: "回答信息量",
+      credibilityValid: (valid, total) => `${valid}/${total} 道回答信息充足`,
+      credibilityFlags: "回答中包含",
       qualityFlagLabels: {
         scene: "具体场景",
         cause: "因果",
@@ -120,8 +124,8 @@
       backInitial: "返回初步结果",
       submitSample: "提交样本（匿名）",
       improve: "帮助改进",
-      continueAnalysis: "继续深度分析",
-      retryAnalysis: "重新请求 AI",
+      continueAnalysis: "继续完善结果",
+      retryAnalysis: "重新分析",
       returnOpen: "返回补写开放题",
       restart: "重新测试",
       reference16p: "参考 16Personalities",
@@ -137,43 +141,43 @@
       pageIncomplete: "请完成本页所有题目",
       agree: "同意",
       disagree: "不同意",
-      initialCoordinate: "初步坐标",
-      bridgeCopy: "量表已经完成。下一步不是为了“多测一点”，而是用 5 道访谈式开放题复核那些容易被自我印象误判的维度。",
-      continueDeepAnalysisTitle: "继续深度分析",
-      continueDeepAnalysisCopy: "回答定制问题，获得证据化复核和更完整的悄悄话",
+      initialCoordinate: "初步结果",
+      bridgeCopy: "量表已经完成。再回答 5 道贴近生活的问题，可以帮助 TypeMe 看清那些容易摇摆或被误判的部分。",
+      continueDeepAnalysisTitle: "继续完善结果",
+      continueDeepAnalysisCopy: "结合你的真实经历，得到更具体的解读和建议",
       traditionalOnlyTitle: "直接看传统结果",
       traditionalOnlyCopy: "只查看量表分布、类型速览和基础建议",
       reviseAnswersTitle: "返回修改答案",
       reviseAnswersCopy: "回到最后一页检查你的选择",
-      openAnalysis: "深度分析",
-      interview: (n) => `访谈 ${n}`,
+      openAnalysis: "开放题",
+      interview: (n) => `第 ${n} 题`,
       openAnswerAria: "开放题回答",
       previousPrompt: "上一题",
       nextPrompt: "下一题",
       submitAnalysis: "提交分析",
       openSkippable: "开放题可跳过，但至少 2 题更可靠",
-      qualityHigh: "细节充足，AI 可以更稳地判断。",
+      qualityHigh: "细节充足，这段回答很有参考价值。",
       qualityMedium: "还不错，再补一个具体场景会更准。",
       qualityLow: "信息偏少，建议写发生了什么、你怎么想、最后怎么选。",
       qualityEmpty: "先写下真实场景，越具体越有价值。",
-      scaleLoadingTitle: "正在整理量表坐标",
-      scaleLoadingCopy: "正在生成维度分布和访谈式追问。",
-      aiLoadingTitle: "正在等待 AI 分析结果",
-      aiLoadingCopy: "请勿刷新或离开本页；刷新会中断本次请求，但已填写内容会保存在本机。",
+      scaleLoadingTitle: "正在整理量表结果",
+      scaleLoadingCopy: "正在整理维度分布和接下来的开放题。",
+      aiLoadingTitle: "正在分析你的回答",
+      aiLoadingCopy: "这通常需要一点时间。请先留在本页，已填写的内容会保存在本机。",
       restoreLoadingTitle: "正在恢复 TypeMe 结果",
       restoreLoadingCopy: "正在读取本地结果，不会重新提交答案。",
       questionLoadTitle: "无法加载题库",
-      questionLoadCopyFile: "当前是直接打开 HTML 文件，测试题库需要通过本地服务读取。请运行：python mbti/server.py --host 127.0.0.1 --port 8899，然后打开 http://127.0.0.1:8899/",
-      questionLoadCopyServer: "题库加载失败，请确认本地服务仍在运行：python mbti/server.py --host 127.0.0.1 --port 8899",
+      questionLoadCopyFile: "题目暂时没有加载出来。请从 TypeMe 网站进入，或稍后刷新重试。",
+      questionLoadCopyServer: "题目暂时没有加载出来，请检查网络后重试。",
       modalTitle: "提示",
       noFinalResultTitle: "没有可恢复的最终结果",
-      noFinalResultCopyScale: "当前本地存档只有量表结果，还没有可恢复的最终 AI 分析。需要重新填写或提交开放题后，才能回到最终结果页。",
+      noFinalResultCopyScale: "目前只保存了量表结果。完成开放题后，才能查看完整结果。",
       noFinalResultCopyEmpty: "还没有找到可恢复的最终结果。需要先完成量表，再填写开放题生成结果。",
       goOpenPrompts: "去开放题",
-      openMinimumCopy: "至少回答 2 道开放题，AI 分析才比较有意义。确定继续提交吗？",
+      openMinimumCopy: "至少认真回答 2 道开放题，分析结果才更有参考价值。仍要继续吗？",
       continueSubmit: "继续提交",
       openQualityGateTitle: "开放题信息还不够",
-      openQualityGateCopy: "请至少补充 2 道有具体场景的回答：写发生了什么、你当时怎么想或怎么选。明显重复、乱码或模板化内容不会进入 AI 分析。",
+      openQualityGateCopy: "请至少补充 2 道有具体场景的回答：发生了什么、你当时怎么想、最后怎么选。重复、乱码或过于笼统的内容无法帮助判断。",
       qualityNeedScene: "具体场景",
       qualityNeedCause: "前因后果",
       qualityNeedChoice: "选择过程",
@@ -184,17 +188,17 @@
       scoreFailedCopy: "50 道答案仍完整保留在本页。请检查网络后重新提交，不需要重新作答。",
       retryScore: "重新提交量表",
       missingQuestions: (count) => `还有 ${count} 题未完成。`,
-      aiUnavailableTitle: "AI 复核未完成",
-      aiUnavailableCopy: "这次没有取得有效的 AI 返回，所以这里只保留量表坐标，不展示逐维交叉验证。你可以稍后重新提交开放题，或检查本地/线上 API 配置。",
-      aiFallbackInsight: "AI 服务暂时不可用，以下内容基于量表分布和类型资料生成。你仍然可以稍后重新提交开放题。",
-      aiFallbackSummary: "传统量表结果已经生成，但 AI 深度分析未完成。",
+      aiUnavailableTitle: "开放题暂未完成分析",
+      aiUnavailableCopy: "本次没有得到完整分析，因此这里只展示量表结果。你的回答仍保存在本机，稍后可以直接重试。",
+      aiFallbackInsight: "分析服务暂时不可用，以下内容仅根据量表结果生成。你可以稍后重新提交开放题。",
+      aiFallbackSummary: "量表结果已经生成，开放题分析暂未完成。",
       retryOpen: "重新提交开放题",
       resumeFinished: "检测到上次完成的 TypeMe 结果",
       resumeProgress: (answered) => `检测到未完成测试：${answered}/50`,
       resumeScale: (answered, total, page) => `未完成量表：${answered}/${total}，继续第 ${page} 页`,
       resumeScaleDone: "量表已完成，等待继续开放题",
       resumeOpenDraft: (answered, total) => `开放题草稿：已填写 ${answered}/${total}`,
-      resumeFinal: "最终 Type Profile 已保存在本机",
+      resumeFinal: "上次测试结果已保存在本机",
       resumeScaleCopy: "继续会回到保存的页码和当前题目。",
       resumeScaleDoneCopy: "继续会回到初步坐标，再选择是否进入开放题。",
       resumeOpenCopy: "继续会回到上次停下的开放题，草稿不会丢失。",
@@ -210,7 +214,7 @@
       printErrorTitle: "无法打印",
       printPopupBlocked: "浏览器拦截了打印窗口，请允许弹窗后重试。",
       sampleConsentTitle: "匿名提交这次样本？",
-      sampleConsentCopy: "这会匿名保存本次量表答案、开放题回答和 AI 结果，用于改进题库、prompt 与结果表达。不会保存姓名、邮箱、IP 或浏览器身份。",
+      sampleConsentCopy: "这会匿名保存本次量表答案、开放题回答和分析结果，用于改进题目和结果表达。不会保存姓名、邮箱、IP 地址或浏览器身份。",
       sampleConsentOk: "确认提交",
       sampleSaveFailed: "样本保存失败",
       sampleSavedTitle: "已保存",
@@ -227,12 +231,12 @@
       submittingAnalysis: "提交中",
       savingSample: "保存中",
       sampleSubmitted: "已提交",
-      aiLoadingSavedCopy: "已保存到本机，正在请求 AI 复核。请勿刷新或离开本页。",
-      aiUnloadWarning: "AI 分析仍在进行，离开会中断本次请求，但已填写内容会保存在本机。",
-      aiCompleteToast: "AI 复核已完成",
-      aiFallbackToast: "AI 暂不可用，已保留量表结果",
+      aiLoadingSavedCopy: "回答已保存到本机，正在生成结果。请先留在本页。",
+      aiUnloadWarning: "结果仍在生成，离开会中断本次分析，但已填写内容会保存在本机。",
+      aiCompleteToast: "分析完成",
+      aiFallbackToast: "分析服务暂时不可用，已保留量表结果",
       localeChangedToast: "语言已切换",
-      feedbackPrompt: "写下你遇到的 bug、卡顿、看不懂的地方，或你希望改进的体验。",
+      feedbackPrompt: "写下你遇到的问题、卡顿、看不懂的地方，或希望改进的体验。",
       feedbackBodyLabel: "反馈内容：",
       feedbackPageLabel: "页面信息：",
       feedbackTypeLabel: "类型：",
@@ -245,43 +249,47 @@
       resultNavAria: "结果页目录",
       typeProfileMissing: "这份类型说明还没有写完。",
       readingNote: "阅读提示",
-      scaleStart: "量表初始",
+      scaleStart: "量表结果",
     },
     en: {
       navHome: "Home",
       navGuide: "Guide",
       navLibrary: "Type Library",
       langCurrent: "English",
+      brandSubtitle: "MBTI TEST",
+      homeAria: "TypeMe home",
+      navAria: "TypeMe navigation",
+      pageTitle: "TypeMe Personality Test",
       homeKicker: "TypeMe · MBTI Test",
-      homeTitle: "Find the 16-type profile that feels closer to you.",
-      homeLead: "Answer a scale first, then a few open prompts from everyday life. TypeMe compares your tendencies, tensions, and expression patterns to build a clearer type profile.",
+      homeTitle: "Find the 16-type result that feels closer to you.",
+      homeLead: "Answer a scale first, then a few questions about everyday life. TypeMe combines your choices and experiences into a clearer result.",
       startTest: "Start test",
       browseTypes: "Browse types",
       readGuide: "Read guide",
       processScale: "50 scale items",
-      processPrompt: "5 prompts",
-      processCheck: "AI cross-check",
-      processProfile: "Type profile",
-      summaryCoordinateKicker: "Coordinate",
+      processPrompt: "5 open questions",
+      processCheck: "Answer analysis",
+      processProfile: "Full result",
+      summaryCoordinateKicker: "Dimensions",
       summaryEvidenceKicker: "Evidence",
-      summaryProfileKicker: "Profile",
-      summaryCoordinateTitle: "Keep the coordinates",
+      summaryProfileKicker: "Result",
+      summaryCoordinateTitle: "See all five dimensions",
       summaryCoordinateCopy: "E/I, S/N, T/F, J/P, and A/T stay visible as proportions instead of being flattened into four letters.",
       summaryEvidenceTitle: "Read real scenes",
-      summaryEvidenceCopy: "Open prompts look at pressure, relationships, and choices, where many mistyped patterns become clearer.",
-      summaryProfileTitle: "Build a profile",
-      summaryProfileCopy: "The result gives a clear type landing while keeping adjacent traits, closeness, and readable interpretation.",
+      summaryEvidenceCopy: "Open questions look at pressure, relationships, and choices, where mistyped patterns often become clearer.",
+      summaryProfileTitle: "Get the full result",
+      summaryProfileCopy: "See your closest type, nearby possibilities, and which answers shaped the result.",
       guideKicker: "Guide",
       guideTitle: "Before the test, here is what to expect.",
-      guideLead: "TypeMe is a 16-type personality assessment tool, not a clinical diagnosis. It starts with scale coordinates, then uses open prompts to add real-life choices, hesitation, and pressure responses.",
+      guideLead: "TypeMe is a 16-type personality assessment tool, not a clinical diagnosis. It starts with scale coordinates, then adds real-life choices, hesitation, and pressure responses through open questions.",
       guideAsideTitle: "What you get",
       guideAsideStrong: "Type landing · Dimension ratios · Answer evidence · Next steps",
       guideAsideCopy: "The result gives one clear landing while keeping nearby possibilities when the evidence is close.",
       guideCards: [
         ["01", "Start with the scale", "50 items establish an initial type coordinate. The scale reads relative tendency, not personal worth."],
-        ["02", "Add open prompts", "Open prompts move into concrete life scenes: pressure, relationships, conflict, sudden change, and self-evaluation."],
+        ["02", "Answer open questions", "These questions move into real situations: pressure, relationships, conflict, sudden change, and self-evaluation."],
         ["03", "Read closeness", "Percentages show how close the current evidence is to a type. Close candidates mean some dimensions are still near the border."],
-        ["04", "Read the profile", "The final result combines type landing, adjacent possibilities, answer evidence, and a more human closing note."],
+        ["04", "Read the full result", "The final result brings together your closest type, nearby possibilities, answer evidence, and a personal closing note."],
       ],
       guideNotes: [
         ["How to read results", "Start with the type landing, then look at dimensions near the center. Borderline dimensions are best understood through open-answer evidence."],
@@ -291,28 +299,28 @@
       dimsTitle: "Five dimensions",
       libraryKicker: "Type Library",
       libraryTitle: "Browse the 16 types used by TypeMe.",
-      libraryLead: "This page gives a quick read on each type’s family, keywords, and basic profile. Formal results add A/T identity, closeness, and open-answer evidence.",
+      libraryLead: "This page gives a quick read on each type’s family, keywords, and basic description. Test results also include A/T identity, closeness, and open-answer evidence.",
       filterAll: "All",
       typesCount: (count) => `${count} types`,
       typeLandingTitle: "Closest type",
       typeLandingCopy: (full) => `Your answers lean closest to ${full}. The percentage shows how close the current evidence is to this type; when nearby candidates are close, TypeMe keeps those possibilities visible instead of forcing a false certainty.`,
-      coordinatesTitle: "Coordinates",
+      coordinatesTitle: "Dimension scores",
       coordinatesCopyVerified: "The scale gives initial proportions, while open answers show where they match or create tension.",
-      coordinatesCopyFallback: "The scale coordinates are kept here. Without a completed AI review, TypeMe does not show per-dimension verification.",
+      coordinatesCopyFallback: "Your scale result is kept here. Open-answer analysis was not completed, so further interpretation is not shown yet.",
       restoredCopy: "This is the last result saved on this device.",
-      navCoordinates: "Coordinates",
+      navCoordinates: "Dimensions",
       navEvidence: "Evidence",
       navStatus: "Status",
       navAfterword: "Afterword",
       afterwordLabel: "Afterword",
-      afterwordTitle: (type) => `A note for your ${type} profile`,
+      afterwordTitle: (type) => `A note for you as ${type}`,
       navTop: "Top",
       credibilityTitle: "Result reliability",
-      credibilityReviewed: "AI review completed",
-      credibilityFallback: "AI review unavailable; scale profile only",
-      credibilitySignal: "Open-answer signal",
-      credibilityValid: (valid, total) => `${valid}/${total} answers usable for review`,
-      credibilityFlags: "Signal tags",
+      credibilityReviewed: "Open answers included in the result",
+      credibilityFallback: "Open-answer analysis incomplete; showing the scale result",
+      credibilitySignal: "Answer detail",
+      credibilityValid: (valid, total) => `${valid}/${total} answers have enough detail`,
+      credibilityFlags: "Your answers include",
       qualityFlagLabels: {
         scene: "Scene",
         cause: "Cause",
@@ -330,7 +338,7 @@
       submitSample: "Submit sample",
       improve: "Help improve",
       continueAnalysis: "Continue analysis",
-      retryAnalysis: "Retry AI review",
+      retryAnalysis: "Try analysis again",
       returnOpen: "Edit open answers",
       restart: "Restart",
       reference16p: "Reference 16Personalities",
@@ -346,43 +354,43 @@
       pageIncomplete: "Please answer every item on this page",
       agree: "Agree",
       disagree: "Disagree",
-      initialCoordinate: "Initial coordinate",
-      bridgeCopy: "The scale is complete. The next step is not to add more questions for its own sake, but to use five interview-style prompts to check dimensions that are easy to misread.",
-      continueDeepAnalysisTitle: "Continue deep analysis",
-      continueDeepAnalysisCopy: "Answer tailored prompts for evidence-based review and a fuller closing note",
+      initialCoordinate: "Initial result",
+      bridgeCopy: "The scale is complete. Five questions about everyday situations can help TypeMe understand the parts that are close or easy to misread.",
+      continueDeepAnalysisTitle: "Refine my result",
+      continueDeepAnalysisCopy: "Add real experiences for a more specific reading and suggestions",
       traditionalOnlyTitle: "View scale result",
       traditionalOnlyCopy: "See only the scale distribution, type summary, and basic guidance",
       reviseAnswersTitle: "Revise scale answers",
       reviseAnswersCopy: "Return to the last page and check your choices",
-      openAnalysis: "Deep analysis",
-      interview: (n) => `Interview ${n}`,
+      openAnalysis: "Open questions",
+      interview: (n) => `Question ${n}`,
       openAnswerAria: "Open-answer response",
-      previousPrompt: "Previous prompt",
-      nextPrompt: "Next prompt",
+      previousPrompt: "Previous question",
+      nextPrompt: "Next question",
       submitAnalysis: "Submit analysis",
-      openSkippable: "Open prompts can be skipped, but at least 2 answers make the result more reliable",
-      qualityHigh: "Rich detail. The AI review can read this more steadily.",
+      openSkippable: "Open questions can be skipped, but at least 2 answers make the result more reliable",
+      qualityHigh: "Good detail. This answer adds useful context.",
       qualityMedium: "Good start. One concrete scene would make it clearer.",
       qualityLow: "A little thin. Add what happened, what you thought, and what you chose.",
       qualityEmpty: "Start with a real scene. Specific details matter most.",
-      scaleLoadingTitle: "Organizing scale coordinates",
-      scaleLoadingCopy: "Building dimension ratios and interview prompts.",
-      aiLoadingTitle: "Waiting for AI analysis",
-      aiLoadingCopy: "Please do not refresh or leave this page. Refreshing interrupts this request, but your answers are saved locally.",
+      scaleLoadingTitle: "Preparing your scale result",
+      scaleLoadingCopy: "Preparing your dimension ratios and open questions.",
+      aiLoadingTitle: "Analyzing your answers",
+      aiLoadingCopy: "This may take a moment. Please stay on this page; your answers are saved on this device.",
       restoreLoadingTitle: "Restoring TypeMe result",
       restoreLoadingCopy: "Reading the saved local result without resubmitting your answers.",
       questionLoadTitle: "Question bank unavailable",
-      questionLoadCopyFile: "This page was opened directly as an HTML file. The question bank needs the local server. Run: python mbti/server.py --host 127.0.0.1 --port 8899, then open http://127.0.0.1:8899/",
-      questionLoadCopyServer: "The question bank failed to load. Check that the local server is still running: python mbti/server.py --host 127.0.0.1 --port 8899",
+      questionLoadCopyFile: "The questions did not load. Open the TypeMe website or refresh and try again later.",
+      questionLoadCopyServer: "The questions did not load. Check your connection and try again.",
       modalTitle: "Notice",
       noFinalResultTitle: "No final result yet",
-      noFinalResultCopyScale: "The saved local progress only contains the scale result. To return to a final AI profile, answer or submit the open prompts again.",
-      noFinalResultCopyEmpty: "No recoverable final result was found. Complete the scale first, then answer open prompts to generate a final result.",
-      goOpenPrompts: "Go to open prompts",
-      openMinimumCopy: "AI analysis is more meaningful with at least 2 open answers. Continue anyway?",
+      noFinalResultCopyScale: "Only the scale result is saved. Complete the open questions to see the full result.",
+      noFinalResultCopyEmpty: "No saved final result was found. Complete the scale and open questions first.",
+      goOpenPrompts: "Go to open questions",
+      openMinimumCopy: "The result is more useful with at least 2 thoughtful answers. Continue anyway?",
       continueSubmit: "Continue",
       openQualityGateTitle: "Open answers need more signal",
-      openQualityGateCopy: "Please add at least 2 concrete answers: what happened, what you thought, or what you chose. Repeated, random, or template-like text will not be sent for AI analysis.",
+      openQualityGateCopy: "Please add at least 2 concrete answers: what happened, what you thought, and what you chose. Repeated, random, or vague text cannot support a useful result.",
       qualityNeedScene: "concrete scenes",
       qualityNeedCause: "cause and effect",
       qualityNeedChoice: "decision process",
@@ -393,20 +401,20 @@
       scoreFailedCopy: "All 50 answers are still kept on this page. Check the connection and retry without answering again.",
       retryScore: "Retry scale submission",
       missingQuestions: (count) => `${count} items are still unanswered.`,
-      aiUnavailableTitle: "AI review unavailable",
-      aiUnavailableCopy: "TypeMe did not receive a valid AI response this time, so it keeps the scale coordinates and does not show per-dimension verification. You can retry the open prompts later or check the API configuration.",
-      aiFallbackInsight: "AI analysis is temporarily unavailable. This result is based on the scale distribution and type profile only.",
-      aiFallbackSummary: "The scale result was generated, but the AI evidence review was not completed in this request.",
-      retryOpen: "Retry open prompts",
+      aiUnavailableTitle: "Open answers were not analyzed",
+      aiUnavailableCopy: "The full analysis did not finish, so this page only shows your scale result. Your answers are still saved on this device and you can try again later.",
+      aiFallbackInsight: "Analysis is temporarily unavailable. The content below is based on your scale result only.",
+      aiFallbackSummary: "Your scale result is ready, but the open-answer analysis did not finish.",
+      retryOpen: "Try open answers again",
       resumeFinished: "A previous TypeMe result was found",
       resumeProgress: (answered) => `Unfinished test found: ${answered}/50`,
       resumeScale: (answered, total, page) => `Unfinished scale: ${answered}/${total}. Continue on page ${page}`,
-      resumeScaleDone: "Scale complete; open prompts are next",
+      resumeScaleDone: "Scale complete; open questions are next",
       resumeOpenDraft: (answered, total) => `Open-answer draft: ${answered}/${total} completed`,
-      resumeFinal: "The final Type Profile is saved on this device",
+      resumeFinal: "Your last result is saved on this device",
       resumeScaleCopy: "Continue returns to the saved page and current question.",
-      resumeScaleDoneCopy: "Continue returns to the initial coordinates before the open prompts.",
-      resumeOpenCopy: "Continue returns to the saved open prompt without losing the draft.",
+      resumeScaleDoneCopy: "Continue returns to the initial result before the open questions.",
+      resumeOpenCopy: "Continue returns to the saved open question without losing the draft.",
       resumeFinalCopy: "Continue opens the saved result without requesting analysis again.",
       continue: "Continue",
       discard: "Discard",
@@ -419,7 +427,7 @@
       printErrorTitle: "Print unavailable",
       printPopupBlocked: "The browser blocked the print window. Allow pop-ups and try again.",
       sampleConsentTitle: "Submit this sample anonymously?",
-      sampleConsentCopy: "This will anonymously save the scale answers, open answers, and AI result to improve the question bank, prompts, and result writing. TypeMe will not save your name, email, IP, or browser identity.",
+      sampleConsentCopy: "This anonymously saves your scale answers, open answers, and result to improve TypeMe's questions and writing. It does not save your name, email, IP address, or browser identity.",
       sampleConsentOk: "Submit sample",
       sampleSaveFailed: "Sample save failed",
       sampleSavedTitle: "Saved",
@@ -436,12 +444,12 @@
       submittingAnalysis: "Submitting",
       savingSample: "Saving",
       sampleSubmitted: "Submitted",
-      aiLoadingSavedCopy: "Saved locally. Requesting AI review now. Please do not refresh or leave this page.",
-      aiUnloadWarning: "AI review is still running. Leaving will interrupt this request, but your answers are saved locally.",
-      aiCompleteToast: "AI review complete",
-      aiFallbackToast: "AI is unavailable; the scale result was kept",
+      aiLoadingSavedCopy: "Your answers are saved on this device. The result is being prepared now.",
+      aiUnloadWarning: "Your result is still being prepared. Leaving will interrupt this analysis, but your answers are saved on this device.",
+      aiCompleteToast: "Analysis complete",
+      aiFallbackToast: "Analysis is unavailable; your scale result was kept",
       localeChangedToast: "Language switched",
-      feedbackPrompt: "Describe the bug, confusing text, lag, or experience you want improved.",
+      feedbackPrompt: "Describe the problem, confusing text, lag, or experience you want improved.",
       feedbackBodyLabel: "Feedback:",
       feedbackPageLabel: "Page info:",
       feedbackTypeLabel: "Type:",
@@ -452,9 +460,9 @@
       feedbackDoneTitle: "Help improve",
       feedbackDoneCopy: "TypeMe tried to open an email draft and copied the feedback draft to your clipboard.",
       resultNavAria: "Result navigation",
-      typeProfileMissing: "This type profile is still being written.",
+      typeProfileMissing: "This type description is still being written.",
       readingNote: "Reading note",
-      scaleStart: "Scale start",
+      scaleStart: "Scale result",
     },
   };
 
@@ -472,7 +480,7 @@
   }
 
   function secretLetterTitle(full, savedTitle = "") {
-    const fallbackTitle = isEnLocale() ? `A note for your ${full} profile` : `给 ${full} 型的你的悄悄话`;
+    const fallbackTitle = isEnLocale() ? `A note for you as ${full}` : `给 ${full} 型的你的悄悄话`;
     const title = String(savedTitle || "").trim();
     if (!title) return fallbackTitle;
     if (isEnLocale() && hasCjkText(title)) return fallbackTitle;
@@ -481,26 +489,26 @@
 
   const sectionCopy = {
     "zh-CN": {
-      typeLanding: ["解读", "类型落点"],
-      coordinates: ["坐标", "量表坐标"],
-      dimensions: ["维度", "五维坐标"],
+      typeLanding: ["结果", "最接近的类型"],
+      coordinates: ["维度", "维度比例"],
+      dimensions: ["维度", "五个维度"],
       index: ["导航", "目录"],
       typeCues: ["线索", "人格线索"],
       nextSteps: ["操作", "后续操作"],
       restored: ["状态", "已恢复"],
-      resultHero: ["档案", "类型档案"],
+      resultHero: ["结果", "你的测试结果"],
       readTip: ["读法", "怎么看"],
       guideOutput: ["结果", "你会得到什么"],
     },
     en: {
       typeLanding: ["READING", "Closest type"],
-      coordinates: ["MAP", "Scale coordinates"],
+      coordinates: ["DIMENSIONS", "Dimension scores"],
       dimensions: ["MAP", "Five dimensions"],
       index: ["NAV", "Jump to"],
       typeCues: ["SIGNALS", "Type cues"],
       nextSteps: ["ACTIONS", "Next steps"],
       restored: ["STATUS", "Restored"],
-      resultHero: ["PROFILE", "Type profile"],
+      resultHero: ["RESULT", "Your result"],
       readTip: ["READ", "How to read"],
       guideOutput: ["OUTPUT", "What you get"],
     },
@@ -1105,7 +1113,7 @@
             <span>${escHtml(t("processScale"))}</span><i></i><span>${escHtml(t("processPrompt"))}</span><i></i><span>${escHtml(t("processCheck"))}</span><i></i><span>${escHtml(t("processProfile"))}</span>
           </div>
           </section>
-          <aside class="persona-stage persona-family-${escHtml(preview.family)}" aria-label="${escHtml(isEnLocale() ? "Type profile preview" : "类型档案预览")}">
+          <aside class="persona-stage persona-family-${escHtml(preview.family)}" aria-label="${escHtml(isEnLocale() ? "Result preview" : "结果预览")}">
             <div class="persona-preview-card">
             <div class="persona-asset-zone">
               ${assetSlot(preview.code)}
@@ -1280,6 +1288,7 @@
   const originalSyncTopChrome = window.syncTopChrome;
 
   function renderTypeMeChrome(route) {
+    document.title = t("pageTitle");
     const topInner = document.querySelector(".top-inner");
     if (!topInner) {
       personaSetActiveRoute(route);
@@ -1290,15 +1299,15 @@
     if (brand) {
       brand.className = "brand persona-header-brand";
       brand.setAttribute("data-typeme-route", "home");
-      brand.setAttribute("aria-label", "TypeMe home");
+      brand.setAttribute("aria-label", t("homeAria"));
       brand.innerHTML = `
         <span class="persona-header-mark">T</span>
-        <span class="persona-header-copy"><strong>TypeMe</strong><small>MBTI TEST</small></span>`;
+        <span class="persona-header-copy"><strong>TypeMe</strong><small>${escHtml(t("brandSubtitle"))}</small></span>`;
     }
 
     const tabs = topInner.querySelector(".tabs");
     if (tabs) {
-      tabs.setAttribute("aria-label", "TypeMe navigation");
+      tabs.setAttribute("aria-label", t("navAria"));
       tabs.innerHTML = `
         <button class="tab" type="button" data-route="home" data-typeme-route="home">${escHtml(t("navHome"))}</button>
         <button class="tab" type="button" data-route="theory" data-typeme-route="theory">${escHtml(t("navGuide"))}</button>
@@ -1558,7 +1567,7 @@
     panel.setAttribute("aria-labelledby", "persona-type-modal-title");
     panel.setAttribute("tabindex", "-1");
     panel.innerHTML = `
-      <button class="persona-type-close" type="button" onclick="closeType()" aria-label="${escHtml(isEnLocale() ? "Close type profile" : "关闭类型档案")}" title="${escHtml(isEnLocale() ? "Close" : "关闭")}">×</button>
+      <button class="persona-type-close" type="button" onclick="closeType()" aria-label="${escHtml(isEnLocale() ? "Close type details" : "关闭类型说明")}" title="${escHtml(isEnLocale() ? "Close" : "关闭")}">×</button>
       <header class="persona-type-modal-head">
         <div class="persona-type-modal-asset">${assetSlot(type, "asset-modal")}</div>
         <div>
@@ -1691,9 +1700,9 @@
       return `
         <section class="persona-whisper">
           <span class="persona-whisper-label"><i>♡</i> ${escHtml(t("afterwordLabel"))}</span>
-          <h3>A note for your ${escHtml(full)} profile</h3>
+          <h3>A note for you as ${escHtml(full)}</h3>
           <div class="persona-whisper-body">
-            <p>This profile is not here to close the case on you. It gathers the reactions, pressures, and choices that appeared most clearly in this round.</p>
+            <p>This result does not define you. It highlights the reactions, pressures, and choices that appeared most clearly in your answers.</p>
             <p>${strengths ? `Available resources include: ${escHtml(strengths)}.` : "Some strengths need more specific open answers before they can be read well."}</p>
             <p>${growth ? `The parts that may need care include: ${escHtml(growth)}.` : "When a dimension sits near the middle, it usually means your strategy changes with context."}</p>
           </div>
@@ -1705,7 +1714,7 @@
         <span class="persona-whisper-label"><i>♡</i> ${escHtml(t("afterwordLabel"))}</span>
         <h3>${escHtml(secretLetterTitle(full))}</h3>
         <div class="persona-whisper-body">
-          <p>这份档案不是给你贴标签，而是把你在关系、压力和选择里的惯性整理成更容易读懂的语言。</p>
+          <p>这份结果不是给你贴标签。它只是把你在关系、压力和选择里的习惯，整理成更容易读懂的语言。</p>
           <p>${strengths ? `你已经能调动的资源包括：${escHtml(strengths)}。` : "有些优势需要更具体的开放题才能被准确看见。"}</p>
           <p>${growth ? `需要被温柔照顾的地方包括：${escHtml(growth)}。` : "如果某些维度接近中间，不必急着修正自己；那通常意味着你会随场景切换策略。"}</p>
         </div>
@@ -1716,10 +1725,10 @@
   function personaFallbackBlock(hasFallback) {
     const kicker = hasFallback
       ? (isEnLocale() ? "REVIEW STATUS" : "复核状态")
-      : (isEnLocale() ? "SCALE PROFILE" : "量表档案");
+      : (isEnLocale() ? "SCALE RESULT" : "量表结果");
     const title = hasFallback
       ? t("aiUnavailableTitle")
-      : (isEnLocale() ? "This is the scale profile" : "这是量表档案");
+      : (isEnLocale() ? "Your scale result" : "你的量表结果");
     const copy = hasFallback
       ? t("aiUnavailableCopy")
       : (isEnLocale() ? "The scale has produced an initial type. After open answers, TypeMe can compare your real-life choices with the scale coordinates." : "量表已经给出初始类型。继续回答开放题后，系统会把真实场景里的选择和量表坐标放在一起对照。");
@@ -1839,7 +1848,7 @@
         ["Reading", ai.insight || ""],
         ["Afterword", ai.secret_letter || ""],
         [t("scaleStart"), `${result.type}-${result.identity}`],
-        ["AI status", verified ? "Reviewed" : "Not reviewed"],
+        ["Analysis status", verified ? "Complete" : "Incomplete"],
       ]
       : [
         ["类型", finalType],
@@ -1849,7 +1858,7 @@
         ["解读", ai.insight || ""],
         ["悄悄话", ai.secret_letter || ""],
         [t("scaleStart"), `${result.type}-${result.identity}`],
-        ["AI 状态", verified ? "已完成复核" : "未完成复核"],
+        ["分析状态", verified ? "已完成" : "未完成"],
       ];
     const sections = lines
       .filter(([, value]) => String(value || "").trim())
@@ -1866,7 +1875,7 @@
       span{display:block;margin-bottom:10px;color:#4f9b89;letter-spacing:.02em;font-size:14px;font-weight:700}
       p{margin:0;white-space:pre-wrap;font-size:16px}
       @media print{body{background:#fff}main{padding:28px 0}a{display:none}}
-    </style></head><body><main><header><h1>${escHtml(finalType)}</h1><h2>${escHtml(profile.nickname || (isEnLocale() ? "Type profile" : "类型档案"))}</h2><div class="meta">${escHtml(isEnLocale() ? "Generated by TypeMe" : "由 TypeMe 生成")} · ${new Date().toLocaleString(isEnLocale() ? "en-US" : "zh-CN")}</div></header>${sections}</main></body></html>`;
+    </style></head><body><main><header><h1>${escHtml(finalType)}</h1><h2>${escHtml(profile.nickname || (isEnLocale() ? "Your result" : "你的测试结果"))}</h2><div class="meta">${escHtml(isEnLocale() ? "Generated by TypeMe" : "由 TypeMe 生成")} · ${new Date().toLocaleString(isEnLocale() ? "en-US" : "zh-CN")}</div></header>${sections}</main></body></html>`;
   }
 
   function personaDownloadHTML(name, html) {
@@ -2079,7 +2088,7 @@
     const note = localizedFamily(fid);
     const tags = axisTags(type);
     const hasFallback = !!(ai && (ai.ai_available === false || ai.is_fallback));
-    const confidence = verified && ai?.ai_confidence ? `<span class="persona-profile-chip">${escHtml(isEnLocale() ? "AI confidence" : "AI 信心")} ${escHtml(ai.ai_confidence)}%</span>` : "";
+    const confidence = verified && ai?.ai_confidence ? `<span class="persona-profile-chip">${escHtml(isEnLocale() ? "Analysis confidence" : "分析可信度")} ${escHtml(ai.ai_confidence)}%</span>` : "";
     const quality = verified && ai?.answer_quality_score ? `<span class="persona-profile-chip">${escHtml(isEnLocale() ? "Answer detail" : "回答信息量")} ${escHtml(ai.answer_quality_score)}%</span>` : "";
     const heroMeta = sectionMeta("resultHero");
     const coordinateMeta = sectionMeta("coordinates");
