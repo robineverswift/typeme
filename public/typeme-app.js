@@ -1202,7 +1202,7 @@
           <span class="persona-type-code">${type}</span>
           <h3>${escHtml(profile.nickname || type)}</h3>
           <p>${escHtml(profile.description || "")}</p>
-          <div class="persona-type-tags">${tags.slice(0, 4).map((tag) => `<span>${escHtml(tag)}</span>`).join("")}</div>
+          <div class="persona-type-tags">${tags.slice(0, 3).map((tag) => `<span>${escHtml(tag)}</span>`).join("")}</div>
           <small class="persona-type-note">${escHtml(note.tone || "")}</small>
         </button>`;
     }).join("");
@@ -1536,6 +1536,8 @@
   window.resumeBanner = personaResumeBanner;
   try { resumeBanner = personaResumeBanner; } catch {}
 
+  let typeModalReturnFocus = null;
+
   async function personaOpenType(type) {
     if (!(await ensureTypeMeQuestions())) return;
     const panel = $id("type-panel");
@@ -1549,14 +1551,20 @@
     const strengths = profile.strengths || [];
     const weaknesses = profile.weaknesses || [];
     const careers = profile.careers || [];
+    typeModalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     panel.className = `panel persona-type-panel persona-family-${fid}`;
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-labelledby", "persona-type-modal-title");
+    panel.setAttribute("tabindex", "-1");
     panel.innerHTML = `
+      <button class="persona-type-close" type="button" onclick="closeType()" aria-label="${escHtml(isEnLocale() ? "Close type profile" : "关闭类型档案")}" title="${escHtml(isEnLocale() ? "Close" : "关闭")}">×</button>
       <header class="persona-type-modal-head">
         <div class="persona-type-modal-asset">${assetSlot(type, "asset-modal")}</div>
         <div>
           <span class="persona-type-code">${escHtml(type)}</span>
           <p class="persona-type-family">${escHtml(familyLabel)}</p>
-          <h2>${escHtml(profile.nickname || type)}</h2>
+          <h2 id="persona-type-modal-title">${escHtml(profile.nickname || type)}</h2>
           <p>${escHtml(profile.description || (isEnLocale() ? "This type description is not finished yet." : "这个类型的说明还没有写完。"))}</p>
           <div class="persona-type-modal-tags">${tags.map((tag) => `<span>${escHtml(tag)}</span>`).join("")}</div>
         </div>
@@ -1577,6 +1585,8 @@
       </div>
       ${careers.length ? `<section class="persona-type-modal-careers"><span>${escHtml(isEnLocale() ? "Possible fitting directions" : "可能舒服的方向")}</span><div>${careers.map((item) => `<b>${escHtml(item)}</b>`).join("")}</div></section>` : ""}`;
     modal.classList.add("active", "persona-type-modal");
+    document.body.classList.add("persona-modal-open");
+    requestAnimationFrame(() => panel.focus({ preventScroll: true }));
   }
   window.openType = personaOpenType;
   try { openType = personaOpenType; } catch {}
@@ -1584,7 +1594,12 @@
   function personaCloseType(event) {
     if (event && event.target !== event.currentTarget) return;
     const modal = $id("type-modal");
-    if (modal) modal.classList.remove("active", "persona-type-modal");
+    if (!modal || !modal.classList.contains("active")) return;
+    modal.classList.remove("active", "persona-type-modal");
+    document.body.classList.remove("persona-modal-open");
+    const returnFocus = typeModalReturnFocus;
+    typeModalReturnFocus = null;
+    requestAnimationFrame(() => returnFocus?.focus({ preventScroll: true }));
   }
   window.closeType = personaCloseType;
   try { closeType = personaCloseType; } catch {}
@@ -2315,7 +2330,19 @@
   }, true);
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeTypeMeLanguageMenu();
+    if (event.key === "Escape") {
+      closeTypeMeLanguageMenu();
+      personaCloseType();
+      return;
+    }
+    if (event.key === "Tab") {
+      const modal = $id("type-modal");
+      if (!modal?.classList.contains("active")) return;
+      const closeButton = modal.querySelector(".persona-type-close");
+      if (!closeButton) return;
+      event.preventDefault();
+      closeButton.focus();
+    }
   });
 
   async function initializeTypeMeApp() {
