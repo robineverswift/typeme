@@ -598,11 +598,52 @@ body.typeme-ui-active.persona-production-route #screen-library.screen.active{
   border:1px solid rgba(255,255,255,.3);
   border-radius:999px;
 }
-.persona-asset-slot:before{inset:28px}
-.persona-asset-slot:after{inset:54px;opacity:.58}
-.persona-asset-symbol{position:relative;z-index:1;font-size:30px;font-weight:820;letter-spacing:.05em}
-.persona-asset-line{position:absolute;left:30px;right:30px;height:1px;background:rgba(255,255,255,.34)}
-.persona-asset-line.l1{top:42px}.persona-asset-line.l2{top:50%;transform:rotate(-24deg)}.persona-asset-line.l3{bottom:42px}
+.persona-asset-slot:before,
+.persona-asset-slot:after{display:none}
+.persona-type-sigil{
+  position:relative;
+  z-index:1;
+  width:78%;
+  height:78%;
+  overflow:visible;
+  color:#fffaf2;
+  filter:drop-shadow(0 5px 12px rgba(36,33,29,.16));
+}
+.persona-type-sigil *{vector-effect:non-scaling-stroke}
+.persona-type-sigil .sigil-frame,
+.persona-type-sigil .sigil-energy,
+.persona-type-sigil .sigil-perception,
+.persona-type-sigil .sigil-decision,
+.persona-type-sigil .sigil-rhythm{
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.persona-type-sigil .sigil-frame{opacity:.28;stroke-width:1.2}
+.persona-type-sigil .sigil-energy{opacity:.34}
+.persona-type-sigil .sigil-perception{opacity:.54}
+.persona-type-sigil .sigil-decision{opacity:.86;stroke-width:2.3}
+.persona-type-sigil .sigil-rhythm{opacity:.44;stroke-dasharray:2 5}
+.persona-type-sigil .sigil-node{fill:currentColor;opacity:.72}
+.persona-type-sigil .sigil-pole{
+  fill:currentColor;
+  stroke:rgba(36,33,29,.18);
+  stroke-width:1;
+  opacity:.86;
+}
+.persona-type-sigil .pole-2{opacity:.68}
+.persona-type-sigil .pole-3{opacity:.54}
+.persona-type-sigil .pole-4{opacity:.4}
+.persona-type-sigil .sigil-code{
+  fill:currentColor;
+  stroke:none;
+  font-family:Inter,Geist,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:14px;
+  font-weight:820;
+  letter-spacing:0;
+}
 .persona-symbols span,
 .persona-type-code,
 .persona-tag{
@@ -866,6 +907,9 @@ body.typeme-ui-active #screen-theory .persona-section-label i{
     linear-gradient(145deg,var(--family-color),var(--persona-ink-brown) 76%,#2d2a25);
   box-shadow:0 12px 28px rgba(86,54,43,.12);
 }
+.persona-type-asset .persona-type-sigil{width:88%;height:88%}
+.persona-type-asset .persona-type-sigil .sigil-frame{opacity:.34}
+.persona-type-asset .persona-type-sigil .sigil-decision{stroke-width:2.7}
 .persona-type-asset b,
 .persona-type-asset em{position:relative;z-index:1;font-style:normal}
 .persona-type-asset b{font-size:24px;letter-spacing:.02em}

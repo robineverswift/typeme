@@ -9,10 +9,10 @@
   };
 
   const familyNotes = {
-    analysts: { tone: "结构 / 远景 / 推演", copy: "更容易先看系统、策略和长期代价。卡片里的角色槽未来适合偏冷静、锋利、几何感的资产。" },
-    diplomats: { tone: "关系 / 意义 / 感受", copy: "更容易从人的需要、价值和氛围里理解选择。角色资产可以更柔和、流动、带一点情绪光。" },
-    sentinels: { tone: "秩序 / 责任 / 稳定", copy: "更在意可靠性、承诺和生活结构。未来资产适合稳定、清晰、有日常守护感的形象。" },
-    explorers: { tone: "行动 / 体验 / 现场", copy: "更相信现场判断、身体感和即时反馈。角色资产可以更轻快、机动、带一点工具感。" },
+    analysts: { tone: "结构 / 远景 / 推演", copy: "你可能更习惯先拆解系统、比较策略，再判断一件事的长期代价。" },
+    diplomats: { tone: "关系 / 意义 / 感受", copy: "你可能更容易从人的需要、价值和相处氛围里理解一个选择。" },
+    sentinels: { tone: "秩序 / 责任 / 稳定", copy: "你可能更在意可靠性、承诺，以及生活是否有清楚而稳定的结构。" },
+    explorers: { tone: "行动 / 体验 / 现场", copy: "你可能更相信现场判断、亲身体验，以及当下给出的实际反馈。" },
   };
 
   const axisWords = {
@@ -533,10 +533,10 @@
 
   const familyCopy = {
     "zh-CN": {
-      analysts: { label: "分析家", tone: "结构 / 远景 / 推演", copy: "更容易先看系统、策略和长期代价。卡片里的角色槽未来适合偏冷静、锋利、几何感的资产。" },
-      diplomats: { label: "外交家", tone: "关系 / 意义 / 感受", copy: "更容易从人的需要、价值和氛围里理解选择。角色资产可以更柔和、流动、带一点情绪光。" },
-      sentinels: { label: "守卫者", tone: "秩序 / 责任 / 稳定", copy: "更在意可靠性、承诺和生活结构。未来资产适合稳定、清晰、有日常守护感的形象。" },
-      explorers: { label: "探索家", tone: "行动 / 体验 / 现场", copy: "更相信现场判断、身体感和即时反馈。角色资产可以更轻快、机动、带一点工具感。" },
+      analysts: { label: "分析家", tone: "结构 / 远景 / 推演", copy: "你可能更习惯先拆解系统、比较策略，再判断一件事的长期代价。" },
+      diplomats: { label: "外交家", tone: "关系 / 意义 / 感受", copy: "你可能更容易从人的需要、价值和相处氛围里理解一个选择。" },
+      sentinels: { label: "守卫者", tone: "秩序 / 责任 / 稳定", copy: "你可能更在意可靠性、承诺，以及生活是否有清楚而稳定的结构。" },
+      explorers: { label: "探索家", tone: "行动 / 体验 / 现场", copy: "你可能更相信现场判断、亲身体验，以及当下给出的实际反馈。" },
     },
     en: {
       analysts: { label: "Analysts", tone: "Structure / Vision / Inference", copy: "Types that tend to read systems, strategy, and long-term tradeoffs first." },
@@ -1056,13 +1056,38 @@
       </section>`;
   }
 
+  function typeSigil(type, compact = false) {
+    const code = String(type || "TYPE").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4).padEnd(4, "X");
+    const [energy, perception, decision, rhythm] = code;
+    const energyMark = energy === "E"
+      ? '<path class="sigil-energy" d="M18 50h64M68 38l14 12-14 12"/>'
+      : '<path class="sigil-energy" d="M50 18v64M38 32l12-14 12 14"/>';
+    const perceptionMark = perception === "N"
+      ? '<path class="sigil-perception" d="M50 25 75 50 50 75 25 50Z"/>'
+      : '<rect class="sigil-perception" x="28" y="28" width="44" height="44" rx="12"/>';
+    const decisionMark = decision === "T"
+      ? '<path class="sigil-decision" d="M34 38h32M50 38v28"/>'
+      : '<path class="sigil-decision" d="M31 43c10-13 28-13 38 0M31 57c10 13 28 13 38 0"/>';
+    const rhythmMark = rhythm === "J"
+      ? '<path class="sigil-rhythm" d="M18 31A38 38 0 0 1 69 18M82 69A38 38 0 0 1 31 82"/>'
+      : '<path class="sigil-rhythm" d="M20 34A38 38 0 0 1 66 19M80 66A38 38 0 0 1 34 81"/><circle class="sigil-node" cx="18" cy="38" r="3"/><circle class="sigil-node" cx="82" cy="62" r="3"/>';
+    const poles = [
+      energy === "E" ? [84, 50] : [16, 50],
+      perception === "N" ? [50, 16] : [50, 84],
+      decision === "T" ? [76, 24] : [24, 76],
+      rhythm === "J" ? [76, 76] : [24, 24],
+    ].map(([cx, cy], index) => `<circle class="sigil-pole pole-${index + 1}" cx="${cx}" cy="${cy}" r="${index === 0 ? 3.2 : 2.2}"/>`).join("");
+    return `<svg class="persona-type-sigil${compact ? " is-compact" : ""}" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+      <circle class="sigil-frame" cx="50" cy="50" r="42"/>
+      ${energyMark}${perceptionMark}${decisionMark}${rhythmMark}${poles}
+      ${compact ? "" : `<text class="sigil-code" x="50" y="54" text-anchor="middle">${escHtml(code)}</text>`}
+    </svg>`;
+  }
+
   function assetSlot(type, sizeClass = "") {
     return `
-      <div class="persona-asset-slot ${sizeClass}" aria-label="${escHtml(type)} future persona asset slot">
-        <span class="persona-asset-symbol">${escHtml(type)}</span>
-        <span class="persona-asset-line l1"></span>
-        <span class="persona-asset-line l2"></span>
-        <span class="persona-asset-line l3"></span>
+      <div class="persona-asset-slot ${sizeClass}" role="img" aria-label="${escHtml(isEnLocale() ? `${type} type mark` : `${type} 类型印记`)}">
+        ${typeSigil(type)}
       </div>`;
   }
 
@@ -1206,7 +1231,7 @@
       return `
         <button class="persona-type-card persona-family-${fid}" type="button" onclick="openType('${type}')">
           <span class="persona-family-badge">${familyName(type)}</span>
-          <span class="persona-type-asset"><b>${type.slice(0, 2)}</b><em>${type.slice(2)}</em></span>
+          <span class="persona-type-asset" aria-hidden="true">${typeSigil(type, true)}</span>
           <span class="persona-type-code">${type}</span>
           <h3>${escHtml(profile.nickname || type)}</h3>
           <p>${escHtml(profile.description || "")}</p>
