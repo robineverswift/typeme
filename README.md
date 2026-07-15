@@ -51,6 +51,7 @@ Studio uses Supabase Auth for login and server-side Supabase REST calls for admi
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `STUDIO_ADMIN_EMAILS`
 - `STUDIO_COOKIE_SECRET` recommended
+- `CRON_SECRET` random string of at least 16 characters
 
 Run `supabase/schema.sql` in the Supabase SQL editor before using the dashboard, content tables, analysis logs, or anonymous sample storage. The service-role key is used only inside `api/index.py`; never expose it in frontend code.
 
@@ -66,6 +67,18 @@ After configuring Vercel and Supabase, verify the deployed wiring locally:
 ```bash
 python scripts/check-remote-studio.py
 ```
+
+### Supabase Free Project Keepalive
+
+`vercel.json` schedules `/api/cron/supabase-keepalive` once per day. The route
+uses the server-side service-role key to make three read-only, one-row probes
+against existing Studio tables. It does not insert or update data.
+
+Set `CRON_SECRET` for the Production environment before enabling the job. Vercel
+automatically sends it as a bearer token when invoking the cron route; requests
+without a matching token are rejected. Cron delivery is best effort, so this
+reduces the likelihood of inactivity pausing but does not replace a paid uptime
+guarantee.
 
 ## Local Development
 
@@ -94,6 +107,7 @@ This repository is adapted for Vercel:
 - `questions.json` is loaded from the project root by the serverless function.
 - `public/studio.html` is served through the `/studio` rewrite.
 - `supabase/schema.sql` defines the current Studio/admin tables.
+- `vercel.json` defines the protected daily Supabase keepalive cron.
 
 Do not copy the stdlib `BaseHTTPRequestHandler` server from the local workspace into `api/index.py`; the Vercel deployment uses Flask.
 

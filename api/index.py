@@ -23,6 +23,7 @@ AI_AUTH_HEADER = os.environ.get("AI_AUTH_HEADER", "Authorization")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+CRON_SECRET = os.environ.get("CRON_SECRET", "").strip()
 STUDIO_COOKIE_SECRET = os.environ.get("STUDIO_COOKIE_SECRET", "")
 STUDIO_ADMIN_EMAILS = {
     email.strip().lower()
@@ -198,6 +199,34 @@ def db_request(path, method="GET", payload=None):
         return e.code, parsed
     except (URLError, TimeoutError) as e:
         return 502, {"error": str(e)}
+
+
+@app.route("/api/cron/supabase-keepalive")
+def handle_supabase_keepalive():
+    """Generate harmless database activity so an active Free project stays available."""
+    if not CRON_SECRET:
+        return json_response({"ok": False, "error": "Cron is not configured"}, 503)
+
+    authorization = request.headers.get("Authorization", "")
+    if not hmac.compare_digest(authorization, f"Bearer {CRON_SECRET}"):
+        return json_response({"ok": False, "error": "Unauthorized"}, 401)
+    if not is_db_enabled():
+        return json_response({"ok": False, "error": "Supabase is not configured"}, 503)
+
+    query = urlencode({"select": "id", "limit": "1"})
+    probes = {}
+    for table in ("persona_types", "persona_response_samples", "analysis_logs"):
+        status, _ = db_request(f"{quote(table)}?{query}")
+        probes[table] = status
+
+    failed = [table for table, status in probes.items() if status >= 300]
+    if failed:
+        return json_response({"ok": False, "failed": failed, "probes": probes}, 502)
+    return json_response({
+        "ok": True,
+        "checkedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "probes": probes,
+    })
 
 
 def list_rows(table, columns="*", order="created_at.desc", limit=200):
