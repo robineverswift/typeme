@@ -12,7 +12,8 @@ Live demo: https://typeme-beta.vercel.app
 - Browser-local progress recovery with graceful continuation when storage is unavailable
 - Type landing with confidence, adjacent candidates, and dimension coordinates
 - AI-assisted profile synthesis with fallback behavior when AI is unavailable
-- Chinese and English UI localization
+- Chinese and English UI and AI-result localization
+- Bounded score/analysis payloads, short duplicate-request caching, and best-effort process-local analysis throttling
 - Type library for browsing the 16 base types
 - Vercel deployment with a small Flask serverless adapter
 
@@ -31,6 +32,7 @@ The result is intended as a reflective profile, not a clinical diagnosis.
 - API keys are read from environment variables and are not committed.
 - `mbti/config.json` is ignored and should only be used for local development.
 - Vercel production keys should be configured in the Vercel dashboard.
+- Successful analysis responses may remain in short-lived process memory for up to two minutes to prevent accidental duplicate LLM requests; they are not written to a new cache table.
 
 ## Studio Status
 
@@ -108,6 +110,7 @@ This repository is adapted for Vercel:
 - `public/studio.html` is served through the `/studio` rewrite.
 - `supabase/schema.sql` defines the current Studio/admin tables.
 - `vercel.json` defines the protected daily Supabase keepalive cron.
+- `request_guard.py` contains additive payload validation, short-lived deduplication, and process-local rate limiting for public score/analysis routes.
 
 Do not copy the stdlib `BaseHTTPRequestHandler` server from the local workspace into `api/index.py`; the Vercel deployment uses Flask.
 

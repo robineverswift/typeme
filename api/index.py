@@ -7,6 +7,17 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from flask import Flask, request, jsonify, make_response
 
+from request_guard import (
+    ANALYZE_MAX_BODY_BYTES,
+    SCORE_MAX_BODY_BYTES,
+    RequestProblem,
+    SlidingWindowLimiter,
+    TTLResultCache,
+    request_fingerprint,
+    validate_analyze_payload,
+    validate_score_payload,
+)
+
 app = Flask(__name__)
 
 # ── Load data ──
@@ -40,6 +51,32 @@ SAMPLE_ALLOWED_TOP_KEYS = {
     "client_sample_id", "created_at", "source_locale", "quality_flags", "analysis_status", "consent", "traditional", "ai",
     "final_type", "answers", "open_answers", "selected_questions", "feedback",
 }
+
+_ANALYSIS_CACHE = TTLResultCache()
+_ANALYSIS_LIMITER = SlidingWindowLimiter()
+_ANALYSIS_CLIENT_SALT = secrets.token_bytes(32)
+
+
+def _analysis_client_key(raw_address):
+    value = str(raw_address or "unknown").encode("utf-8", errors="replace")
+    return hashlib.sha256(_ANALYSIS_CLIENT_SALT + value).hexdigest()
+
+
+def _read_json_request(max_bytes):
+    length = request.content_length
+    if length is not None and length > max_bytes:
+        raise RequestProblem("Request payload is too large", 413)
+    raw = request.get_data(cache=False) or b""
+    if len(raw) > max_bytes:
+        raise RequestProblem("Request payload is too large", 413)
+    try:
+        decoded = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise RequestProblem("Request body must be UTF-8")
+    try:
+        return json.loads(decoded) if decoded else {}
+    except json.JSONDecodeError:
+        raise RequestProblem("Invalid JSON")
 
 DIM_ORDER = ["EI", "SN", "TF", "JP", "AT"]
 DIM_POLES = {
@@ -827,6 +864,297 @@ def call_ai(system_prompt, user_prompt, retries=2, temperature=0.3, max_tokens=4
     raise RuntimeError(f"网络错误: {last_error}")
 
 
+def _normalize_type(value, fallback):
+    import re
+    raw = str(value or fallback or "").strip().upper()
+    match = re.search(r"[IE][SN][TF][JP](?:-[AT])?", raw)
+    if not match:
+        return fallback
+    return match.group(0)
+
+def _extract_leaning(value, dim, fallback=""):
+    first, second = DIM_POLES.get(dim, ("", ""))
+    raw = str(value or "").upper()
+    if raw in (first, second):
+        return raw
+    # Ignore ambiguous strings like "E/I"; they do not provide directional evidence.
+    if "/" in raw:
+        return fallback
+    for char in raw:
+        if char in (first, second):
+            return char
+    return fallback
+
+def _normalize_verdict(value, leaning, traditional_dom):
+    raw = str(value or "").lower()
+    if value == "✅" or raw in ("confirmed", "support", "supported", "match", "agree"):
+        return "confirmed"
+    if "⚠" in raw or raw in ("tension", "conflict", "mixed", "differing", "different"):
+        return "tension"
+    if value == "?" or raw in ("insufficient", "unknown", "unclear", "not_enough"):
+        return "insufficient"
+    if leaning and traditional_dom and leaning != traditional_dom:
+        return "tension"
+    if leaning and traditional_dom and leaning == traditional_dom:
+        return "confirmed"
+    return "insufficient"
+
+def _normalize_chinese_quotes(value):
+    """Normalize LLM quote punctuation around Chinese text for user-facing output."""
+    import re
+    if isinstance(value, dict):
+        return {k: _normalize_chinese_quotes(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_normalize_chinese_quotes(v) for v in value]
+    if not isinstance(value, str):
+        return value
+
+    def repl(match):
+        inner = match.group(1).strip()
+        if any("\u4e00" <= ch <= "\u9fff" for ch in inner):
+            return f"“{inner}”"
+        return match.group(0)
+
+    value = re.sub(r"'([^'\n]{1,160})'", repl, value)
+    value = re.sub(r'"([^"\n]{1,160})"', repl, value)
+    value = re.sub(r"‘([^’\n]{1,160})’", repl, value)
+    value = re.sub(r"“([^”\n]{1,160})”", repl, value)
+    return value
+
+def _polish_interpretive_copy(value):
+    """Remove generic comfort-copy drift from user-facing AI text."""
+    if isinstance(value, dict):
+        return {k: _polish_interpretive_copy(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_polish_interpretive_copy(v) for v in value]
+    if not isinstance(value, str):
+        return value
+
+    replacements = {
+        "人格不是判决。它只是给你一盏灯，让你带着更多理解继续往前走。":
+            "把它当作一份观察记录：不替你定义自己，只帮你看清反复出现的反应、犹豫和选择。",
+        "人格不是判决。它只是一盏灯，让你带着更多理解继续往前走。":
+            "把它当作一份观察记录：不替你定义自己，只帮你看清反复出现的反应、犹豫和选择。",
+        "人格类型描述的是偏好，不是能力上限；它可以解释你为什么这样反应，但不应该限制你之后怎样选择。":
+            "类型只是入口。真正值得留下的，是你在压力、关系和选择里反复启动的那套应对方式。",
+        "MBTI 只是一个帮助我们了解自己倾向的工具，它描述的是偏好而非能力，是倾向而非定论。":
+            "类型不是终点。更有价值的是看见那些自动发生的心理动作：你如何靠近、如何防守，又如何把混乱重新整理成可处理的形状。",
+    }
+    for old, new in replacements.items():
+        value = value.replace(old, new)
+    return value
+
+def build_dimension_evidence(parsed, details, ai_type, ai_verdicts):
+    analysis = parsed.get("dimension_analysis", {}) if isinstance(parsed, dict) else {}
+    evidence = {}
+    for index, dim in enumerate(DIM_ORDER):
+        ad = analysis.get(dim, {}) if isinstance(analysis, dict) else {}
+        if not isinstance(ad, dict):
+            ad = {}
+        traditional_dom = details.get(dim, {}).get("dominant", "")
+        ai_letter = ""
+        if ai_type and len(ai_type) >= 4:
+            ai_letter = ai_type.replace("-", "")[index] if index < len(ai_type.replace("-", "")) else ""
+        leaning = _extract_leaning(ad.get("leaning") or ad.get("倾向"), dim, ai_letter)
+        confidence = max(0, min(100, _safe_int(ad.get("confidence"), 55)))
+        verdict = _normalize_verdict(ad.get("verdict") or ai_verdicts.get(dim), leaning, traditional_dom)
+        evidence[dim] = {
+            "leaning": leaning,
+            "confidence": confidence,
+            "evidence_quote": ad.get("evidence_quote") or ad.get("evidence") or "",
+            "verdict": verdict,
+            "reason": ad.get("reason") or ad.get("分析") or "",
+        }
+    return evidence
+
+def fuse_persona_result(traditional_type, identity, details, parsed, dimension_evidence, answer_quality_score):
+    final_letters = list(str(traditional_type or "XXXX")[:4])
+    final_identity = identity or "A"
+    fusion_details = {}
+
+    for index, dim in enumerate(DIM_ORDER):
+        trad = details.get(dim, {})
+        traditional_dom = trad.get("dominant", "")
+        other = trad.get("other", "")
+        trad_pct = _safe_int(trad.get("dom_pct"), 50)
+        evidence = dimension_evidence.get(dim, {})
+        leaning = evidence.get("leaning", "")
+        evidence_conf = _safe_int(evidence.get("confidence"), 0)
+        verdict = evidence.get("verdict", "insufficient")
+        quality = _safe_int(answer_quality_score, 0)
+
+        band = "high" if trad_pct >= 72 else ("medium" if trad_pct >= 58 else "low")
+        flipped = False
+        status = verdict
+        reason = "AI 证据不足，保留量表坐标。"
+
+        if not leaning or leaning not in DIM_POLES.get(dim, ()):
+            status = "insufficient"
+        elif leaning == traditional_dom:
+            status = "confirmed"
+            reason = "开放题证据支持量表方向。"
+        elif leaning == other:
+            if band == "low" and evidence_conf >= 62 and quality >= 45:
+                flipped = True
+                status = "flipped"
+                reason = "量表接近中线，开放题证据足以修正方向。"
+            elif band == "medium" and evidence_conf >= 78 and quality >= 60:
+                flipped = True
+                status = "flipped"
+                reason = "量表中等置信，开放题证据较强，修正该维度。"
+            else:
+                status = "tension"
+                reason = "开放题出现相邻气质，但证据不足以推翻量表方向。"
+
+        final_value = leaning if flipped else traditional_dom
+        if dim == "AT":
+            final_identity = final_value or final_identity
+        elif index < 4 and final_value:
+            final_letters[index] = final_value
+
+        fusion_details[dim] = {
+            "traditional": traditional_dom,
+            "traditional_pct": trad_pct,
+            "ai_leaning": leaning,
+            "ai_confidence": evidence_conf,
+            "band": band,
+            "verdict": status,
+            "flipped": flipped,
+            "final": final_value,
+            "reason": reason,
+        }
+
+    final_type = "".join(final_letters[:4]) + f"-{final_identity}"
+    return final_type, fusion_details
+
+
+_CJK_VISIBLE_RE = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _has_cjk_visible_text(*values, min_count=8):
+    text = " ".join(str(v) for v in values if v)
+    if not text:
+        return False
+    matches = _CJK_VISIBLE_RE.findall(text)
+    if len(matches) < min_count:
+        return False
+    return (len(matches) / max(len(text), 1)) > 0.03
+
+def _collect_json_strings(value, skip_keys=None):
+    skip_keys = set(skip_keys or [])
+    out = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in skip_keys:
+                continue
+            out.extend(_collect_json_strings(item, skip_keys))
+    elif isinstance(value, list):
+        for item in value:
+            out.extend(_collect_json_strings(item, skip_keys))
+    elif isinstance(value, str):
+        out.append(value)
+    return out
+
+def _extract_json_object(raw):
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[-1]
+        raw = raw.rsplit("```", 1)[0]
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        brace_start = raw.find("{")
+        brace_end = raw.rfind("}")
+        if brace_start != -1 and brace_end > brace_start:
+            return json.loads(raw[brace_start:brace_end + 1])
+    return {}
+
+def _repair_english_analysis_payload(parsed):
+    """Rewrite model drift back to English while preserving the JSON contract."""
+    if not parsed:
+        return parsed
+    visible_strings = _collect_json_strings(parsed, skip_keys={"evidence_quote"})
+    if not _has_cjk_visible_text(*visible_strings):
+        return parsed
+
+    repair_prompt = f"""The following JSON is a TypeMe analysis payload for an English user interface, but some user-facing values are written in Chinese.
+
+Rewrite every user-facing string value into natural English.
+
+Rules:
+- Preserve the JSON object shape exactly.
+- Preserve all JSON keys exactly, including compatibility keys such as "倾向" and "分析".
+- Preserve MBTI type codes, dimension codes, percentages, arrays, booleans, and numbers.
+- Keep "evidence_quote" short. If it quotes Chinese user input, either translate it into English or summarize it in English.
+- Do not add markdown.
+- Return valid JSON only.
+
+Input JSON:
+{json.dumps(parsed, ensure_ascii=False)}
+"""
+    raw = call_ai(
+        "You are a JSON localization guard. Return valid JSON only. All user-facing string values must be natural English.",
+        repair_prompt,
+        temperature=0.15,
+        max_tokens=4096,
+    )
+    repaired = _extract_json_object(raw)
+    return repaired if isinstance(repaired, dict) and repaired else parsed
+
+def _split_portrait_letter(raw):
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[-1]
+        raw = raw.rsplit("```", 1)[0]
+
+    if "[[PORTRAIT]]" in raw or "[[LETTER]]" in raw:
+        portrait_part = raw.split("[[PORTRAIT]]", 1)[-1]
+        if "[[LETTER]]" in portrait_part:
+            portrait, letter = portrait_part.split("[[LETTER]]", 1)
+        else:
+            portrait = portrait_part
+            letter = ""
+        return portrait.strip(), letter.strip(), True
+
+    return "", "", False
+
+def _repair_english_portrait_sections(portrait, letter, full_type):
+    """Repair Call 2 language drift without front-end translation."""
+    if not _has_cjk_visible_text(portrait, letter):
+        return portrait, letter
+    repair_prompt = f"""The following TypeMe result sections are for an English user interface, but they are not fully English.
+
+Rewrite both sections into natural English.
+
+Rules:
+- Preserve the meaning and psychological interpretation.
+- Preserve the type code {full_type} if mentioned.
+- Do not add Chinese text.
+- Do not add markdown.
+- Return exactly:
+[[PORTRAIT]]
+English portrait text
+[[LETTER]]
+English afterword text
+
+[[PORTRAIT]]
+{portrait}
+
+[[LETTER]]
+{letter}
+"""
+    raw = call_ai(
+        "You are TypeMe's English localization guard. Write only natural English prose and preserve the two separators.",
+        repair_prompt,
+        temperature=0.25,
+        max_tokens=2048,
+    )
+    repaired_portrait, repaired_letter, ok = _split_portrait_letter(raw)
+    if ok and (repaired_portrait or repaired_letter):
+        return repaired_portrait or portrait, repaired_letter or letter
+    return portrait, letter
+
+
 def _open_answer_signal(text):
     raw = str(text or "").strip()
     compact = re.sub(r"\s+", "", raw).lower()
@@ -852,29 +1180,51 @@ def _open_answer_signal(text):
     punct = bool(re.search(r"[，。！？；,.!?;]", raw))
     latin_run = bool(re.fullmatch(r"[a-z']{18,}", compact, re.IGNORECASE))
     score = min(62, round(signal / 180 * 58))
-    if scene: score += 24
-    if cause: score += 7
-    if choice: score += 7
-    if emotion: score += 6
-    if time_marker: score += 5
-    if punct and signal > 45: score += 8
-    if signal > 90: score += 8
-    if max_run >= 5: score -= 35
-    if repeated: score -= 35
-    if dominance > 0.42 and signal > 12: score -= 30
-    if latin_run and not scene: score -= 24
-    if signal < 24: score = min(score, 24)
+    if scene:
+        score += 24
+    if cause:
+        score += 7
+    if choice:
+        score += 7
+    if emotion:
+        score += 6
+    if time_marker:
+        score += 5
+    if punct and signal > 45:
+        score += 8
+    if signal > 90:
+        score += 8
+    if max_run >= 5:
+        score -= 35
+    if repeated:
+        score -= 35
+    if dominance > 0.42 and signal > 12:
+        score -= 30
+    if latin_run and not scene:
+        score -= 24
+    if signal < 24:
+        score = min(score, 24)
     flags = []
-    if scene: flags.append("scene")
-    if cause: flags.append("cause")
-    if choice: flags.append("choice")
-    if emotion: flags.append("emotion")
-    if time_marker: flags.append("time")
-    if punct: flags.append("sentence")
-    if repeated: flags.append("repeated_pattern")
-    if max_run >= 6: flags.append("long_repeat")
-    if dominance > 0.48 and signal > 12: flags.append("character_dominance")
-    if latin_run and not scene: flags.append("single_token_text")
+    if scene:
+        flags.append("scene")
+    if cause:
+        flags.append("cause")
+    if choice:
+        flags.append("choice")
+    if emotion:
+        flags.append("emotion")
+    if time_marker:
+        flags.append("time")
+    if punct:
+        flags.append("sentence")
+    if repeated:
+        flags.append("repeated_pattern")
+    if max_run >= 6:
+        flags.append("long_repeat")
+    if dominance > 0.48 and signal > 12:
+        flags.append("character_dominance")
+    if latin_run and not scene:
+        flags.append("single_token_text")
     return {
         "score": max(0, min(100, score)),
         "signal": signal,
@@ -893,8 +1243,10 @@ def _open_answer_signal(text):
 
 def is_nonsense(text):
     raw = str(text or "").strip()
-    if not raw or _NONSENSE_RE.search(raw): return True
-    if all(not c.isalnum() for c in raw): return True
+    if not raw or _NONSENSE_RE.search(raw):
+        return True
+    if all(not c.isalnum() for c in raw):
+        return True
     signal = _open_answer_signal(raw)
     return signal["low_info"] or signal["score"] < 25
 
@@ -903,7 +1255,8 @@ def _review_open_answer_quality(open_answers):
     reviewed = []
     for item in open_answers:
         answer = str((item or {}).get("answer", "")).strip()
-        if not answer: continue
+        if not answer:
+            continue
         signal = _open_answer_signal(answer)
         reviewed.append((item, signal))
     valid = [
@@ -942,34 +1295,90 @@ def _review_open_answer_quality(open_answers):
     }
 
 
-def _fallback_analysis(traditional_type, identity, details, open_answers, quality_review=None):
+def _fallback_analysis(traditional_type, identity, details, open_answers, locale="zh-CN", quality_review=None):
     """Generate a fallback analysis from profile data when DeepSeek is unreachable."""
     full_type = f"{traditional_type}-{identity}"
+    is_en = str(locale or "").lower().startswith("en")
+
     profile = questions_data.get("type_profiles", {}).get(traditional_type, {})
-    dim_names = {"EI": "精力来源", "SN": "认知方式", "TF": "决策方式", "JP": "生活态度", "AT": "身份认同"}
+    dim_names = {"EI": "Energy source", "SN": "Information style", "TF": "Decision style", "JP": "Life rhythm", "AT": "Identity style"} if is_en else {"EI": "精力来源", "SN": "认知方式", "TF": "决策方式", "JP": "生活态度", "AT": "身份认同"}
 
     dim_analysis = {}
+    dimension_evidence = {}
+    fusion_details = {}
     for dim in DIM_ORDER:
         d = details.get(dim, {})
         dom = d.get("dominant", "?")
+        other = d.get("other", "?")
         pct = d.get("dom_pct", 50)
         meta = dim_names.get(dim, dim)
-        label = "明显偏向" if pct > 70 else ("轻微偏向" if pct > 55 else "接近居中")
+        label = ("clear leaning" if pct > 70 else ("slight leaning" if pct > 55 else "near the midpoint")) if is_en else ("明显偏向" if pct > 70 else ("轻微偏向" if pct > 55 else "接近居中"))
         verdict = "confirmed" if pct > 65 else ("tension" if pct > 50 else "insufficient")
         dim_analysis[dim] = {
             "倾向": dom,
             "verdict": verdict,
             "confidence": min(pct + 10, 95),
-            "evidence": f"传统量表数据显示你在该维度偏向 {dom}（{pct}%），属于「{label}」。",
-            "分析": f"基于量表统计，你在 {meta}（{dim}）维度上表现出 {dom} 倾向。" + ("这一倾向较为明显。" if pct > 60 else "但并非极端，在不同情境下可能有所变化。")
+            "evidence": f"The scale leans toward {dom} on this dimension ({pct}%), a {label}." if is_en else f"传统量表数据显示你在该维度偏向 {dom}（{pct}%），属于「{label}」。",
+            "分析": (f"Based on the scale, your {meta} ({dim}) currently leans {dom}." + (" This leaning is relatively clear." if pct > 60 else " It is not extreme and may vary by context.")) if is_en else f"基于量表统计，你在 {meta}（{dim}）维度上表现出 {dom} 倾向。" + ("这一倾向较为明显。" if pct > 60 else "但并非极端，在不同情境下可能有所变化。")
+        }
+        dimension_evidence[dim] = {
+            "leaning": dom,
+            "confidence": min(pct + 10, 95),
+            "evidence_quote": "",
+            "verdict": "insufficient",
+            "reason": "The AI review was not completed, so open-answer evidence was not used to revise this dimension." if is_en else "AI 未完成，未使用开放题证据修正该维度。",
+        }
+        fusion_details[dim] = {
+            "traditional": dom,
+            "traditional_pct": pct,
+            "ai_leaning": "",
+            "ai_confidence": 0,
+            "band": "high" if pct >= 66 else ("medium" if pct >= 56 else "low"),
+            "verdict": "insufficient",
+            "flipped": False,
+            "final": dom,
+            "reason": "The AI review was not completed, so TypeMe keeps the scale direction." if is_en else "AI 未完成，保留传统量表方向。",
         }
 
+    if is_en:
+        insight = f"Based on the scale data, the current type landing is {full_type}. The AI review was not completed, so this result keeps the scale coordinates and does not claim open-answer verification."
+        secret_title = f"A note for your {full_type} profile"
+        secret = "This is a scale-only result. It can still be useful as a first coordinate, but the open-answer layer is what turns it into a more personal reading."
+        differences = ["The AI review is currently unavailable, so TypeMe cannot compare open-answer evidence in this result."]
+        strengths = ["Scale coordinates are available"]
+        growth = ["Open-answer evidence is unavailable"]
+        followups = [
+            "Describe a recent scene that left you conflicted or energized.",
+            "What role do you usually take in a team?",
+            "When do you feel most effective?"
+        ]
+        insight_title = "AI review"
+    else:
+        insight = f"基于传统量表数据，你的类型为 {full_type}。由于 AI 深度分析服务暂不可用，以下分析基于统计数据和类型特征生成，仅供参考。完成开放题后再次提交可获得更精准的个性化解读。"
+        secret_title = f"给{full_type}的你 的悄悄话"
+        secret = "MBTI 只是一个帮助我们了解自己倾向的工具，它描述的是偏好而非能力，是倾向而非定论。"
+        differences = ["AI 深度分析暂不可用，无法对比差异。请稍后重试或检查 API 配置。"]
+        strengths = (profile.get("strengths") or [])[:4] or ["暂无数据"]
+        growth = (profile.get("weaknesses") or [])[:3] or ["暂无数据"]
+        followups = [
+            "尝试描述一个最近让你感到困扰或兴奋的具体场景？",
+            "你在团队中通常扮演什么角色？",
+            "什么情况下你会觉得最有成就感？"
+        ]
+        insight_title = "AI 深度解读"
+
     return {
+        "traditional_type": full_type,
+        "final_type": full_type,
+        "ai_type": "",
+        "analysis_locale": "en" if is_en else "zh-CN",
+        "dimension_evidence": dimension_evidence,
+        "fusion_details": fusion_details,
         "portrait": "",
-        "insight_title": "AI 深度解读",
-        "insight": f"基于传统量表数据，你的类型为 {full_type}。由于 AI 深度分析服务暂不可用，以下分析基于统计数据和类型特征生成，仅供参考。完成开放题后再次提交可获得更精准的个性化解读。",
-        "secret_letter_title": f"给{full_type}的你 的悄悄话",
-        "secret_letter": "MBTI 只是一个帮助我们了解自己倾向的工具，它描述的是偏好而非能力，是倾向而非定论。",
+        "insight_title": insight_title,
+        "insight": insight,
+        "secret_letter_title": secret_title,
+        "secret_letter": secret,
         "agreement": "medium",
         "ai_available": False,
         "is_fallback": True,
@@ -978,22 +1387,37 @@ def _fallback_analysis(traditional_type, identity, details, open_answers, qualit
         "answer_quality_score": _safe_int((quality_review or {}).get("average_score"), 50) or 50,
         "quality_flags": (quality_review or {}).get("quality_flags", {}),
         "insufficient_evidence_dims": [],
-        "differences": ["AI 深度分析暂不可用，无法对比差异。请稍后重试或检查 API 配置。"],
+        "differences": differences,
         "dimension_analysis": dim_analysis,
-        "strengths": (profile.get("strengths") or [])[:4] or ["暂无数据"],
-        "growth_areas": (profile.get("weaknesses") or [])[:3] or ["暂无数据"],
+        "strengths": strengths,
+        "growth_areas": growth,
         "career_hints": (profile.get("careers") or [])[:6] or [],
-        "follow_up_questions": [
-            "尝试描述一个最近让你感到困扰或兴奋的具体场景？",
-            "你在团队中通常扮演什么角色？",
-            "什么情况下你会觉得最有成就感？"
-        ],
+        "follow_up_questions": followups,
     }
 
 
-def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
+def _analyze_with_deepseek(traditional_type, identity, details, open_answers, confidence=None, candidate_types=None, locale="zh-CN"):
     """Split into two calls: first generates long insight text, second generates structured JSON."""
-    dim_names = {"EI": "精力来源", "SN": "认知方式", "TF": "决策方式", "JP": "生活态度", "AT": "身份认同"}
+    is_en = str(locale or "").lower().startswith("en")
+    output_language = "English" if is_en else "简体中文"
+    address_rule = "Address the reader directly as \"you\". Do not say \"the user\"." if is_en else "通篇用「你」称呼对方，不要用「用户」"
+    quote_rule = "Use natural English punctuation and quote user phrases sparingly with English quotation marks." if is_en else "引用原话时使用中文双引号（如“我当时的感受是……”），不要标注Q1/Q2等编号"
+    strict_quote_rule = "Do not use Chinese quote marks in English output unless quoting Chinese user text verbatim." if is_en else "所有对话、选项、原话引用都必须使用中文双引号“”，禁止使用英文单引号或英文双引号"
+    language_rule = (
+        "Write every user-facing string in English. Keep JSON keys exactly as requested, including compatibility keys such as 倾向/分析 if present, but all values shown to users must be English."
+        if is_en else
+        "所有面向用户展示的内容都必须使用简体中文。"
+    )
+    style_contract = (
+        "Style contract: analysis_summary is evidence review, concise and inferential; portrait is interpretive profile writing, vivid but grounded; secret_letter is emotional integration, intimate and steady. Do not let the three sections sound like the same report."
+        if is_en else
+        "文风契约：analysis_summary 是开放题证据，简洁、推理、可验证；portrait 是解释性画像，有画面感但必须落回心理结构；secret_letter 是情绪承接，亲密、安稳、有余味。三者不能写成同一种报告腔。"
+    )
+    dim_names = (
+        {"EI": "Energy source", "SN": "Information style", "TF": "Decision style", "JP": "Life rhythm", "AT": "Identity style"}
+        if is_en else
+        {"EI": "精力来源", "SN": "认知方式", "TF": "决策方式", "JP": "生活态度", "AT": "身份认同"}
+    )
     dim_desc = []
     for dim in DIM_ORDER:
         d = details.get(dim, {})
@@ -1003,72 +1427,198 @@ def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
         dim_desc.append(f"- {dim_names.get(dim, dim)} ({dim}): {dom} {pct}% ({strength})")
 
     full_type = f"{traditional_type}-{identity}"
+    confidence = confidence or {}
+    candidate_types = candidate_types or []
+    uncertain_dims = confidence.get("uncertain_dimensions", []) if isinstance(confidence, dict) else []
+    if is_en:
+        confidence_context = "\n".join([
+            f"- Overall certainty: {confidence.get('overall', 'unknown')} / {confidence.get('score', '')}"
+        ] + [
+            f"- Borderline dimension {d.get('dim')}: {d.get('dominant')}/{d.get('other')} ({d.get('dom_pct')}%/{d.get('other_pct')}%)"
+            for d in uncertain_dims[:5] if isinstance(d, dict)
+        ] + ([
+            "- Adjacent candidates: " + ", ".join(
+                f"{c.get('type')}-{c.get('identity', identity)}({c.get('reason', '')})"
+                for c in candidate_types[:4] if isinstance(c, dict)
+            )
+        ] if candidate_types else []))
+    else:
+        confidence_context = "\n".join([
+            f"- 整体确定度: {confidence.get('overall', 'unknown')} / {confidence.get('score', '')}"
+        ] + [
+            f"- 临界维度 {d.get('dim')}: {d.get('dominant')}/{d.get('other')} ({d.get('label')}, {d.get('dom_pct')}%/{d.get('other_pct')}%)"
+            for d in uncertain_dims[:5] if isinstance(d, dict)
+        ] + ([
+            "- 相邻类型: " + "、".join(
+                f"{c.get('type')}-{c.get('identity', identity)}({c.get('reason', '')})"
+                for c in candidate_types[:4] if isinstance(c, dict)
+            )
+        ] if candidate_types else []))
     answers_text = "\n".join(
-        f"Q{oa.get('display_id', i+1)}: {oa.get('text', '')}\n回答: {oa.get('answer', '')}"
+        (
+            f"Q{oa.get('display_id', i+1)}: {oa.get('text', '')}\nAnswer: {oa.get('answer', '')}"
+            if is_en else
+            f"Q{oa.get('display_id', i+1)}: {oa.get('text', '')}\n回答: {oa.get('answer', '')}"
+        )
         for i, oa in enumerate(open_answers)
         if oa.get("answer", "").strip()
     )
+    quality_values = [_safe_int(oa.get("quality_score"), 0) for oa in open_answers if oa.get("answer", "").strip()]
+    answer_quality_score = round(sum(quality_values) / len(quality_values)) if quality_values else 50
+    punctuation_requirement = (
+        "- Use natural English punctuation."
+        if is_en else
+        "- 使用中文标点符号"
+    )
+    adjacent_desc = (
+        "If another type also appears meaningful, explain naturally where the adjacent temperament shows up; otherwise use an empty string."
+        if is_en else
+        "如果另一个类型气质也明显，用自然中文说明它像在哪里；没有就写空字符串"
+    )
+    summary_desc = (
+        "Open-answer evidence review in 180~300 English words. The tone should be inferential and evidence-based, not poetic. Address the reader as you. Give one clear judgment first, then explain which behavioral signals support the final type, and end with any tension, adjacent temperament, or insufficient evidence. Quote at most once."
+        if is_en else
+        "260~420字开放题证据解读。文风偏验证性、推理性、证据链，而不是抒情画像。以「你」称呼，最多引用1处原话。先给一句清晰判断，再解释开放题中哪些行为信号支持最终类型，最后说明哪些信号存在张力、相邻类型气质或信息不足。少复述，多推断；不要写结尾安慰。"
+    )
+    leaning_desc = "E/I, S/N, T/F, J/P, or A/T letter; empty string if insufficient." if is_en else "E或I或空字符串"
+    evidence_quote_desc = "Short English quote or empty string." if is_en else "中文双引号原话或空字符串"
+    reason_desc = "80~150 English words of evidence reasoning." if is_en else "100~180字证据解释"
 
     # ====== CALL 1: Generate analysis summary & structured data ======
-    call1_prompt = f"""你是MBTI人格分析专家。分析一位{full_type}型人格的开放题回答，输出JSON。
+    if is_en:
+        call1_prompt = f"""You are TypeMe's type-profile analyst. Read the open-ended answers for a person whose initial scale result is {full_type}, then return JSON only.
+
+Output language: English
+Language rule: {language_rule}
+Style contract: {style_contract}
+
+Initial scale result: {full_type}
+Dimension scores:
+{chr(10).join(dim_desc)}
+Certainty and adjacent candidates:
+{confidence_context}
+
+Borderline-dimension rule:
+If a scale dimension is close to the midpoint, do not treat the scale result as absolute. Use the open answers to test those dimensions. If evidence is weak, say that the evidence is insufficient instead of forcing certainty.
+
+Open-ended answers:
+{answers_text if answers_text else "(not answered)"}
+
+Requirements:
+- {address_rule}
+- {quote_rule}
+- {strict_quote_rule}
+- Your core task is to explain how the open-ended evidence supports or challenges the initial scale result {full_type}: which thinking patterns, emotional reactions, and behavioral tendencies support it, and which signals look closer to an adjacent type or remain insufficient.
+- Give one clear type landing. The ai_type field must contain only a type code such as INFP-T. Do not add vague prefixes such as “closest to” or “main candidate”.
+- The AI layer extracts evidence for each dimension; the system fusion layer decides the final displayed type.
+- Emotional value should come from explanation, not generic encouragement. Turn vague or conflicting reactions into a coherent psychological mechanism the reader can recognize.
+- Use a personality-psychology and psychodynamic tone: look for defenses, desire, shame, control, relational position, repeated patterns, and self-protective strategies, without pretending to make a clinical diagnosis.
+- Every paragraph should do interpretive work: name a pattern, explain what it protects, show where it helps, show where it becomes costly, and offer a reusable direction.
+- Quote sparingly. Use at most one short quote from the user's answers as an evidence anchor; most of the writing should be inference, modeling, and explanation.
+- Avoid generic slogans such as “personality is not a verdict”, “not a label”, “a light”, “keep moving forward”, or “believe in yourself”.
+- Write for the end user. Do not explain the internal pipeline, prompt logic, scoring mechanism, or developer process in the user-facing text.
+- You may use psychological language, but only when it makes the reader's pattern clearer. Do not pile up terminology.
+- {punctuation_requirement}
+- Keep section functions separate: analysis_summary is an evidence review; portrait and secret_letter are written in the second call.
+- analysis_summary should not become a full essay. Organize it as: judgment -> evidence -> tension or reservation.
+
+Return JSON only. Do not wrap it in markdown:
+{{
+  "ai_type": "final type code such as INFP-T; type code only",
+  "adjacent_type_notes": "{adjacent_desc}",
+  "analysis_summary": "{summary_desc}",
+  "dimension_analysis": {{
+    "EI": {{"leaning":"E or I, or empty if insufficient","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"{evidence_quote_desc}","reason":"{reason_desc}","倾向":"E/I","evidence":"compatibility field in English","分析":"compatibility field in English"}},
+    "SN": {{"leaning":"S or N, or empty if insufficient","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"{evidence_quote_desc}","reason":"{reason_desc}","倾向":"S/N","evidence":"compatibility field in English","分析":"compatibility field in English"}},
+    "TF": {{"leaning":"T or F, or empty if insufficient","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"{evidence_quote_desc}","reason":"{reason_desc}","倾向":"T/F","evidence":"compatibility field in English","分析":"compatibility field in English"}},
+    "JP": {{"leaning":"J or P, or empty if insufficient","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"{evidence_quote_desc}","reason":"{reason_desc}","倾向":"J/P","evidence":"compatibility field in English","分析":"compatibility field in English"}},
+    "AT": {{"leaning":"A or T, or empty if insufficient","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"{evidence_quote_desc}","reason":"{reason_desc}","倾向":"A/T","evidence":"compatibility field in English","分析":"compatibility field in English"}}
+  }},
+  "answer_quality_score": 0-100,
+  "agreement": "high/medium/low",
+  "agreement_details": {{"matching_dims":[],"differing_dims":[],"explanation":"Explain agreement and differences in English."}},
+  "differences": [],
+  "strengths": ["Write as usable psychological resources, not generic strengths."],
+  "growth_areas": ["Write as old strategies that may need renaming or adjustment, not as a flaw list."],
+  "career_hints": [],
+  "core_tension": "One precise English sentence under 35 words: what the tension is, what it protects, and what it costs.",
+  "verdicts": {{"EI":"✅","SN":"✅","TF":"⚠️","JP":"✅","AT":"?"}}
+}}
+
+For verdicts: judge each dimension independently from the open answers. Do not copy the scale result. ✅ = supports scale tendency, ⚠️ = tension, ? = insufficient evidence. Fill every dimension; do not mark everything ✅."""
+    else:
+        call1_prompt = f"""你是兼具人格分析、心理咨询语感和写作能力的 TypeMe 类型档案分析师。分析一位{full_type}型人格的开放题回答，输出JSON。
+
+输出语言：{output_language}
+语言规则：{language_rule}
+文风契约：{style_contract}
 
 传统量表结果：{full_type}
 维度得分：
 {chr(10).join(dim_desc)}
+置信度与相邻类型：
+{confidence_context}
+
+临界维度处理要求：如果量表维度接近中线，不要把量表初始类型当成绝对结论。开放题主要用于验证这些维度；若证据不足，请明确写“信息不足”，不要强行确认。
 
 回答内容：
 {answers_text if answers_text else "（未填写）"}
 
 要求：
-- 通篇用「你」称呼对方，不要用「用户」
-- 引用原话时直接加引号（如"我当时的感受是…"），不要标注Q1/Q2等编号
-- 核心任务是验证为什么对方确实是{full_type}型——回答中哪些思维模式、情绪反应、行为倾向印证了各维度
+- {address_rule}
+- {quote_rule}
+- {strict_quote_rule}
+- 核心任务是判断开放题证据如何支持或挑战量表初始类型 {full_type}：回答中哪些思维模式、情绪反应、行为倾向支持它，哪些地方更像相邻类型或信息不足
+- 最终必须给出一个清晰类型落点。ai_type 字段只写类型代码（如 INFP-T），不要写“目前更接近”“主候选”等模糊前缀
+- AI 不直接决定最终类型，只负责提取每个维度的证据；最终融合由系统规则完成
+- 情绪价值来自“解释清楚”，不是来自空泛鼓励。要让对方获得“原来如此”的顿悟感：把模糊、矛盾、难以言说的反应纳入一个自洽的心理机制
+- 默认采用人格心理学 + 心理动力学 / 精神分析式洞察的语气：关注防御、欲望、羞耻、控制感、关系位置、重复模式和自我保护策略，但不要假装临床诊断
+- 每段都要完成一个解释动作：命名一个模式、说明它保护了什么、指出它在哪些场景有效、解释它如何变成成本、给出一个可重新使用的方向
+- 少引用，多解释。原话最多引用1处，只作为证据锚点；主体必须是推断、建模、机制链和情绪承接
+- 禁止空泛鸡汤句：不要写“人格不是判决”“不是标签”“一盏灯”“继续往前走”“相信自己”等泛化安慰
+- 面向最终用户表达，不要解释系统如何使用量表、开放题或 AI，也不要把开发机制当成正文
 - 从认知功能角度分析（用F/T/N/S等方向字母，不要Fe/Ni这类缩写，方便普通用户理解）
-- 使用心理学、认知科学术语但自然融入，不堆砌
+- 可以自然使用心理学、认知科学、精神分析术语，但必须为解释服务；不要多领域炫技，不要堆砌术语
 - 使用中文标点符号
+- 文风分工要明确：analysis_summary 是“开放题证据”，偏验证性和推理，要短而有力；portrait 由第二次调用负责，偏解释性画像；secret_letter 由第二次调用负责，偏情绪价值和结尾承接
+- analysis_summary 不要写成完整散文。按“结论 -> 证据 -> 张力/保留意见”的顺序组织，控制在手机端可快速读完的长度
 
 请输出JSON，不要markdown代码块：
 {{
-  "analysis_summary": "400~600字深度分析。以「你」称呼，引用原话（不加编号），从认知功能角度（用F/T/N/S等方向字母，不用Fe/Ni缩写）解读行为模式，论证各维度倾向的真实性。要有温度和洞察力。",
+  "ai_type": "最终类型，如 INFP-T；只写类型代码，不要加模糊前缀",
+  "adjacent_type_notes": "如果另一个类型气质也明显，用自然中文说明它像在哪里；没有就写空字符串",
+  "analysis_summary": "260~420字开放题证据解读。文风偏验证性、推理性、证据链，而不是抒情画像。以「你」称呼，最多引用1处原话。先给一句清晰判断，再解释开放题中哪些行为信号支持最终类型，最后说明哪些信号存在张力、相邻类型气质或信息不足。少复述，多推断；不要写结尾安慰。",
   "dimension_analysis": {{
-    "EI": {{"倾向":"E/I","confidence":0-100,"evidence":"引用原话（不加编号）","分析":"100~180字认知功能分析"}},
-    "SN": {{"倾向":"S/N","confidence":0-100,"evidence":"引用原话（不加编号）","分析":"100~180字认知功能分析"}},
-    "TF": {{"倾向":"T/F","confidence":0-100,"evidence":"引用原话（不加编号）","分析":"100~180字认知功能分析"}},
-    "JP": {{"倾向":"J/P","confidence":0-100,"evidence":"引用原话（不加编号）","分析":"100~180字认知功能分析"}},
-    "AT": {{"倾向":"A/T","confidence":0-100,"evidence":"引用原话（不加编号）","分析":"100~180字认知功能分析"}}
+    "EI": {{"leaning":"E或I或空字符串","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"中文双引号原话或空字符串","reason":"100~180字证据解释","倾向":"E/I","evidence":"兼容字段","分析":"兼容字段"}},
+    "SN": {{"leaning":"S或N或空字符串","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"中文双引号原话或空字符串","reason":"100~180字证据解释","倾向":"S/N","evidence":"兼容字段","分析":"兼容字段"}},
+    "TF": {{"leaning":"T或F或空字符串","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"中文双引号原话或空字符串","reason":"100~180字证据解释","倾向":"T/F","evidence":"兼容字段","分析":"兼容字段"}},
+    "JP": {{"leaning":"J或P或空字符串","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"中文双引号原话或空字符串","reason":"100~180字证据解释","倾向":"J/P","evidence":"兼容字段","分析":"兼容字段"}},
+    "AT": {{"leaning":"A或T或空字符串","confidence":0-100,"verdict":"confirmed/tension/insufficient","evidence_quote":"中文双引号原话或空字符串","reason":"100~180字证据解释","倾向":"A/T","evidence":"兼容字段","分析":"兼容字段"}}
   }},
+  "answer_quality_score": 0-100,
   "agreement": "high/medium/low",
   "agreement_details": {{"matching_dims":[],"differing_dims":[],"explanation":"解释一致与差异"}},
   "differences": [],
-  "strengths": [],
-  "growth_areas": [],
+  "strengths": ["写成可调动的心理资源，不要写普通优点清单"],
+  "growth_areas": ["写成需要重新命名和调整的旧策略，不要写缺点清单"],
   "career_hints": [],
-  "core_tension": "80字以内，为你的焦虑或困境精准命名",
+  "core_tension": "80字以内，为核心心理冲突精准命名：它是什么、保护什么、代价是什么",
   "verdicts": {{"EI":"✅","SN":"✅","TF":"⚠️","JP":"✅","AT":"?"}}
 }}
 
 关于verdicts：根据开放题内容对每个维度做独立判断，不要照抄量表倾向。✅=支持量表倾向，⚠️=存在张力，?=信息不足。每个维度都要写，不要全部写✅。"""
 
+    analysis_system_prompt = (
+        "You are TypeMe's English result analyst. Return valid JSON only. All user-facing values MUST be written in natural English. Do not write Chinese text unless quoting Chinese user input verbatim."
+        if is_en else
+        ""
+    )
     print(f"[AI] Call 1: generating analysis data...", file=sys.stderr)
-    raw1 = call_ai("", call1_prompt, temperature=0.5, max_tokens=4096)
-    raw1 = raw1.strip()
-    if raw1.startswith("```"):
-        raw1 = raw1.split("\n", 1)[-1]
-        raw1 = raw1.rsplit("```", 1)[0]
-
+    raw1 = call_ai(analysis_system_prompt, call1_prompt, temperature=0.5, max_tokens=4096)
     # Parse JSON
-    import re as _re
-    parsed = {}
-    try:
-        parsed = json.loads(raw1)
-    except json.JSONDecodeError:
-        brace_start = raw1.find("{")
-        brace_end = raw1.rfind("}")
-        if brace_start != -1 and brace_end > brace_start:
-            try:
-                parsed = json.loads(raw1[brace_start:brace_end + 1])
-            except:
-                pass
+    parsed = _extract_json_object(raw1)
+    if is_en:
+        parsed = _repair_english_analysis_payload(parsed)
 
     analysis_summary = parsed.get("analysis_summary", "")
     dim_analysis = parsed.get("dimension_analysis", {})
@@ -1078,34 +1628,104 @@ def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
             dim_analysis[dim] = {"倾向": "", "confidence": 60, "evidence": "", "分析": ""}
 
     # ====== CALL 2: Portrait + Letter ======
-    letter_context = f"分析摘要：{analysis_summary[:400]}" if analysis_summary else ""
-    call2_prompt = f"""你是一位温暖有洞察力的心理学家兼作家。请为一位{full_type}型的人撰写两份文字。
+    if is_en:
+        letter_context = f"Evidence summary: {analysis_summary[:700]}" if analysis_summary else ""
+        call2_prompt = f"""You are a warm, incisive TypeMe profile writer with a psychodynamic sensibility. Write two user-facing sections for a {full_type} type profile.
+
+Output language: English
+Language rule: {language_rule}
+Style contract: {style_contract}
+
+{letter_context}
+
+The reader's own answers:
+{answers_text if answers_text else "(not answered)"}
+
+Return exactly the two machine separators below. The separators will not be shown to the user:
+[[PORTRAIT]]
+First section
+[[LETTER]]
+Second section
+
+General principles:
+- The goal is not to comfort with slogans. The goal is to explain a repeated pattern clearly enough that the reader feels “that explains it”.
+- Write like a gentle but sharp interpretation: notice defenses, desire, control, shame, self-respect, relationship position, and repeated patterns, then explain why they once helped.
+- Do not write generic encouragement. Do not use stock lines such as “personality is not a verdict”, “not a label”, “a light”, “keep moving forward”, or “believe in yourself”.
+- Quote at most one short phrase from the reader. Do not turn this into a collection of quotes; transform the material into interpretation. {strict_quote_rule}
+- Do not diagnose, pathologize, or frighten the reader.
+- The two sections must serve different functions: the portrait explains how the person operates; the afterword emotionally integrates that pattern. Do not make both sections sound like the same report.
+- The portrait may be sharper; the afterword should be softer. The portrait explains structure; the afterword places that structure back into a person who can be understood.
+
+Portrait, 170 to 260 English words:
+Create a compact character sketch. What does this person feel like in motion? What kind of scene, instrument, room, sound, or working rhythm do they resemble?
+Start with the image, then connect it to the underlying psychological mechanism: how they find safety, handle uncertainty, protect self-respect, or manage relationships.
+Use imagery, but return to concrete psychological structure. Do not list evidence and do not sound like a scale report.
+
+Afterword, 280 to 460 English words:
+This is the emotional landing of the result. It should be intimate, steady, and specific.
+Suggested structure:
+1. Name one repeated pattern: where the reader tends to be triggered.
+2. Explain what the reaction has protected: safety, order, self-respect, acceptance, control, or not being left behind.
+3. Name the cost: over-effort, avoidance, emotional compression, rehearsed failure, or turning relationships/tasks into a test.
+4. Offer a more mature use of the same strategy: not rejecting the self, but turning an automatic reaction into a chosen tool.
+Do not repeat type judgment or dimension validation. End on one concrete, gentle psychological action the reader can carry away.
+Start directly with the content."""
+    else:
+        letter_context = f"分析摘要：{analysis_summary[:400]}" if analysis_summary else ""
+        call2_prompt = f"""你是一位温暖、有洞察力、偏心理动力学取向的心理学家兼作家。请为一位{full_type}型的人撰写两份文字。
+
+输出语言：{output_language}
+语言规则：{language_rule}
+文风契约：{style_contract}
 
 {letter_context}
 
 对方自己的话：
 {answers_text if answers_text else "（未填写）"}
 
-请按以下结构输出，用「你」称呼。不要标题。
+请按以下结构输出，{address_rule} 不要标题。
+必须使用这两个机器分隔符分隔正文，分隔符本身不会展示给用户：
+[[PORTRAIT]]
+第一段内容
+[[LETTER]]
+第二段内容
 
-一、整体气质画像（150~250字）
+总原则：
+- 目标不是“安慰对方”，而是把对方说不清的重复模式解释清楚，让他获得“原来如此”的理解快感
+- 写作要像一次温柔但锋利的解读：你看见了他的防御、欲望、控制感、羞耻、自责、关系位置和重复模式，也能解释这些东西为什么曾经有用
+- 不要写泛泛鼓励，不要写“人格不是判决”“不是标签”“一盏灯”“继续往前走”“相信自己”等模板句
+- 最多引用1处原话；不要把文字变成摘抄，要把原话转化为解释；{strict_quote_rule}
+- 不做临床诊断，不使用病理化标签，不吓人
+- 两段文字必须有不同功能：整体气质画像负责“看见这个人如何运转”，悄悄话负责“把这个运转方式温柔安放”。不要把两段都写成同一种分析报告
+- 整体气质画像可以锋利，悄悄话要柔软；画像解释结构，悄悄话负责把结构放回一个可以被接住的人身上
+
+一、整体气质画像（180~280字）
 画一幅人物速写像：你说话做事像什么？给人什么感觉？像一种什么场景、物件或声音？
-先描绘画像，再点出藏在画像里的矛盾。
-用短句、断句、意象堆叠——像一段诗意的意识流，让人「看见人」。
+先描绘画像，再点出藏在画像里的心理机制：他如何获得安全感、如何处理不确定、如何保护自尊或关系。
+可以有意象，但不要只有意象；必须落回具体心理结构。
 用有节奏的标点（句号、逗号、破折号）控制呼吸感，不要全程无标点。
+这一段偏“解释性画像”：可以有隐喻、质感和判断，但不要列证据，不要像量表报告。
 
-二、悄悄话（300~600字）
-用文学性和心理洞察写出最需要被理解的部分。
-引用对方原话1-2处（直接用引号，不要标编号）。
-语气像一位懂你的朋友——温暖、坦诚、不评判。
+二、悄悄话（320~520字）
+用文学性和心理洞察写出最需要被理解的部分。悄悄话是结果页的情绪价值核心，但它不是鼓励口号，而是一段更深的解释和安放。
+结构建议：
+1. 先命名一个核心重复模式：他总在什么情境下被触发；
+2. 解释这个反应曾经保护了什么：安全感、自尊、秩序、被接纳感、掌控感或不被抛下；
+3. 指出它现在的代价：过度用力、回避、压抑、预演失败、把关系或任务变成考场；
+4. 给出更成熟的使用方式：不是否定自己，而是把旧策略从自动反应变成可选择的工具。
+引用对方原话最多1处；不要把悄悄话写成原话摘抄，要写成解释和承接；{strict_quote_rule}
+语气像一位懂你的分析者：温暖、坦诚、不评判，但足够精准。
+这一段偏“情绪价值”：不要再做维度验证，不要重复类型判断；重点让对方觉得被理解、被安放、被轻轻接住。结尾不要喊口号，要停在一个具体、温柔、可带走的心理动作上。
 直接以内容开头。"""
 
+    portrait_system_prompt = (
+        "You are TypeMe's English profile writer. Write only natural English prose. Do not use Chinese section titles or Chinese explanatory text unless quoting Chinese user input verbatim."
+        if is_en else
+        ""
+    )
     print(f"[AI] Call 2: portrait + letter…", file=sys.stderr)
-    raw2 = call_ai("", call2_prompt, temperature=0.7, max_tokens=2048)
+    raw2 = call_ai(portrait_system_prompt, call2_prompt, temperature=0.7, max_tokens=2048)
     raw2 = raw2.strip()
-    if raw2.startswith("```"):
-        raw2 = raw2.split("\n", 1)[-1]
-        raw2 = raw2.rsplit("```", 1)[0]
 
     # Parse portrait and letter from Call 2
     import re
@@ -1115,8 +1735,14 @@ def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
     profile_marker = "整体气质画像"
     letter_marker = "悄悄话"
 
-    profile_pos = raw2.find(profile_marker)
-    letter_pos = raw2.find(letter_marker)
+    portrait, letter, split_ok = _split_portrait_letter(raw2)
+    if split_ok:
+        profile_pos = -1
+        letter_pos = -1
+
+    else:
+        profile_pos = raw2.find(profile_marker)
+        letter_pos = raw2.find(letter_marker)
 
     if profile_pos >= 0:
         content_start = profile_pos + len(profile_marker)
@@ -1153,10 +1779,15 @@ def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
         letter = ""
     if not portrait or len(portrait) < 30:
         portrait = analysis_summary[:200] if analysis_summary else ""
+    if is_en:
+        portrait, letter = _repair_english_portrait_sections(portrait, letter, full_type)
 
     # Extract core_tension and verdicts
     core_tension = parsed.get("core_tension", "")
     ai_verdicts = parsed.get("verdicts", {})
+    parsed_quality = _safe_int(parsed.get("answer_quality_score"), answer_quality_score)
+    if parsed_quality <= 0:
+        parsed_quality = answer_quality_score
 
     # Build dimension_analysis with verdicts
     dim_verdicts = {}
@@ -1169,31 +1800,50 @@ def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
         else:
             dim_verdicts[dim] = "insufficient"
 
+    full_type_full = full_type
+    ai_type = _normalize_type(parsed.get("ai_type") or parsed.get("final_type"), full_type_full)
+    dimension_evidence = build_dimension_evidence(parsed, details, ai_type, ai_verdicts)
+    final_type, fusion_details = fuse_persona_result(
+        traditional_type,
+        identity,
+        details,
+        parsed,
+        dimension_evidence,
+        parsed_quality,
+    )
+
     dim_analysis_with_verdicts = {}
     for dim in DIM_ORDER:
         ad = dim_analysis.get(dim, {})
         dom = details.get(dim, {}).get("dominant", "")
-        verdict = dim_verdicts.get(dim, "insufficient")
-        conf = 90 if verdict == "confirmed" else (70 if verdict == "tension" else 55)
+        evidence = dimension_evidence.get(dim, {})
+        fusion = fusion_details.get(dim, {})
+        verdict = fusion.get("verdict") or evidence.get("verdict") or dim_verdicts.get(dim, "insufficient")
+        conf = evidence.get("confidence") or (90 if verdict == "confirmed" else (70 if verdict == "tension" else 55))
         dim_analysis_with_verdicts[dim] = {
-            "倾向": dom,
+            "倾向": fusion.get("final") or evidence.get("leaning") or dom,
             "verdict": verdict,
             "confidence": conf,
-            "evidence": ad.get("evidence", ""),
-            "分析": ad.get("分析", ""),
+            "evidence": evidence.get("evidence_quote") or ad.get("evidence", ""),
+            "分析": evidence.get("reason") or ad.get("分析", ""),
         }
 
     # Build result
-    full_type_full = f"{traditional_type}-{identity}"
     result = {
+        "traditional_type": full_type_full,
+        "ai_type": ai_type,
+        "final_type": final_type,
+        "analysis_locale": "en" if is_en else "zh-CN",
+        "dimension_evidence": dimension_evidence,
+        "fusion_details": fusion_details,
         "portrait": portrait,
         "insight": analysis_summary,
-        "secret_letter_title": f"给{full_type_full}的你 的悄悄话",
+        "secret_letter_title": f"A note for your {final_type} profile" if is_en else f"给{final_type}的你 的悄悄话",
         "secret_letter": letter,
-        "insight_title": "AI 深度解读",
-        "ai_type": parsed.get("ai_type", full_type_full),
+        "insight_title": "AI evidence review" if is_en else "AI 深度解读",
+        "adjacent_type_notes": parsed.get("adjacent_type_notes", ""),
         "ai_confidence": parsed.get("ai_confidence", 72),
-        "answer_quality_score": parsed.get("answer_quality_score", 60),
+        "answer_quality_score": parsed_quality,
         "dimension_analysis": dim_analysis_with_verdicts,
         "insufficient_evidence_dims": [d for d, v in ai_verdicts.items() if v == "?"],
         "follow_up_questions": parsed.get("follow_up_questions", []),
@@ -1205,29 +1855,44 @@ def _analyze_with_deepseek(traditional_type, identity, details, open_answers):
         "career_hints": parsed.get("career_hints", []),
         "core_tension": core_tension,
         "ai_available": True,
-        "analysis_status": "ai_reviewed",
         "is_fallback": False,
     }
+    result = _normalize_chinese_quotes(_polish_interpretive_copy(result))
 
     print(f"[AI] Final: portrait={len(portrait)}c secret={len(letter)}c strengths={len(result['strengths'])} verdicts={dim_verdicts}", file=sys.stderr)
     return result
 
 
 # ====== HTTP HANDLER ======
-def analyze_with_ai(traditional_type, identity, details, open_answers):
+def analyze_with_ai(traditional_type, identity, details, open_answers, confidence=None, candidate_types=None, locale="zh-CN"):
     review = _review_open_answer_quality(open_answers)
     if not review["ok"]:
-        raise ValueError("开放题信息量还不够，暂不进入 AI 分析。请至少补充 2 道包含真实场景、选择或想法过程的回答。")
+        is_en = str(locale or "").lower().startswith("en")
+        message = (
+            "Open answers need more concrete signal before AI analysis. Please provide at least 2 answers with a real scene, choice, or thought process."
+            if is_en else
+            "开放题信息量还不够，暂不进入 AI 分析。请至少补充 2 道包含真实场景、选择或想法过程的回答。"
+        )
+        raise ValueError(message)
     filtered = review["valid_answers"]
+    if review["valid_count"] < review["total_count"]:
+        print(f"[open-quality] filtered {review['total_count'] - review['valid_count']}/{review['total_count']} low-signal answers", file=sys.stderr)
     try:
-        result = _analyze_with_deepseek(traditional_type, identity, details, filtered)
+        result = _analyze_with_deepseek(traditional_type, identity, details, filtered, confidence, candidate_types, locale)
         result["quality_flags"] = review["quality_flags"]
         result["analysis_status"] = "ai_reviewed"
         result["answer_quality_score"] = _safe_int(result.get("answer_quality_score"), review["average_score"]) or review["average_score"]
         return result
-    except Exception as e:
+    except (RuntimeError, ValueError) as e:
+        import traceback, sys
         traceback.print_exc()
-        return _fallback_analysis(traditional_type, identity, details, open_answers, review)
+        print(f"[analyze_with_ai] Caught {type(e).__name__}: {e}", file=sys.stderr)
+        return _fallback_analysis(traditional_type, identity, details, open_answers, locale, review)
+    except Exception as e:
+        import traceback, sys
+        traceback.print_exc()
+        print(f"[analyze_with_ai] UNEXPECTED {type(e).__name__}: {e}", file=sys.stderr)
+        return _fallback_analysis(traditional_type, identity, details, open_answers, locale, review)
 
 
 # ═══════════════════════════════════════════
@@ -1554,27 +2219,49 @@ def handle_studio_content(resource, row_id=""):
 
 @app.route("/api/score", methods=["POST"])
 def handle_score():
-    data = request.get_json(force=True)
-    answers = data.get("answers", [])
-    result = score_traditional(answers)
-    result["selected_questions"] = select_open_ended(result["details"])
-    return jsonify(result)
+    try:
+        data = validate_score_payload(_read_json_request(SCORE_MAX_BODY_BYTES))
+        result = score_traditional(data.get("answers", []))
+        result["selected_questions"] = select_open_ended(result["details"])
+        return jsonify(result)
+    except RequestProblem as exc:
+        return json_response({"error": str(exc)}, exc.status)
 
 
 @app.route("/api/analyze", methods=["POST"])
 def handle_analyze():
-    data = request.get_json(force=True)
     try:
+        data = validate_analyze_payload(_read_json_request(ANALYZE_MAX_BODY_BYTES))
+        fingerprint = request_fingerprint(data)
+        cached = _ANALYSIS_CACHE.get(fingerprint)
+        if cached is not None:
+            response = jsonify(cached)
+            response.headers["X-TypeMe-Cache"] = "HIT"
+            return response
+
+        forwarded = request.headers.get("X-Forwarded-For", "").split(",", 1)[0].strip()
+        remote = forwarded or request.remote_addr or "unknown"
+        if not _ANALYSIS_LIMITER.allow(_analysis_client_key(remote)):
+            raise RequestProblem("Too many analysis requests. Please try again later.", 429)
+
         result = analyze_with_ai(
             data.get("type", ""),
             data.get("identity", ""),
             data.get("details", {}),
             data.get("open_answers", []),
+            data.get("confidence"),
+            data.get("candidate_types"),
+            data.get("locale", "zh-CN"),
         )
+        if result.get("ai_available"):
+            _ANALYSIS_CACHE.put(fingerprint, result)
+        response = jsonify(result)
+        response.headers["X-TypeMe-Cache"] = "MISS"
+        return response
+    except RequestProblem as exc:
+        return json_response({"error": str(exc)}, exc.status)
     except ValueError as exc:
         return str(exc), 400, {"Content-Type": "text/plain; charset=utf-8"}
-    result["analysis_locale"] = "zh-CN"
-    return jsonify(result)
 
 
 # Vercel WSGI entry point
