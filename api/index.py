@@ -2,7 +2,7 @@
 """TypeMe — Vercel Serverless (Flask)."""
 import base64, hashlib, hmac, json, os, random, re, secrets, sys, time, traceback
 from pathlib import Path
-from urllib.parse import quote, urlencode
+from urllib.parse import parse_qsl, quote, urlencode
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from flask import Flask, request, jsonify, make_response
@@ -19,6 +19,30 @@ from request_guard import (
 )
 
 app = Flask(__name__)
+
+
+class VercelApiPathMiddleware:
+    """Restore the public API path after Vercel rewrites to this function."""
+
+    def __init__(self, wrapped_app):
+        self.wrapped_app = wrapped_app
+
+    def __call__(self, environ, start_response):
+        query_pairs = parse_qsl(environ.get("QUERY_STRING", ""), keep_blank_values=True)
+        restored_path = None
+        remaining_pairs = []
+        for key, value in query_pairs:
+            if key == "__vercel_path" and restored_path is None:
+                restored_path = value
+            else:
+                remaining_pairs.append((key, value))
+        if restored_path is not None and environ.get("PATH_INFO") in ("/api/index", "/api/index.py"):
+            environ["PATH_INFO"] = f"/api/{restored_path.lstrip('/')}"
+            environ["QUERY_STRING"] = urlencode(remaining_pairs, doseq=True)
+        return self.wrapped_app(environ, start_response)
+
+
+app.wsgi_app = VercelApiPathMiddleware(app.wsgi_app)
 
 # ── Load data ──
 HERE = Path(__file__).parent.parent
