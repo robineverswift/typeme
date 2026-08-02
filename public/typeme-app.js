@@ -1084,10 +1084,19 @@
     </svg>`;
   }
 
-  function assetSlot(type, sizeClass = "") {
+  function typeCharacterAsset(type, compact = false) {
+    const code = String(type || "TYPE").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+    const assetPath = `/assets/type-characters/${code.toLowerCase()}.webp`;
     return `
-      <div class="persona-asset-slot ${sizeClass}" role="img" aria-label="${escHtml(isEnLocale() ? `${type} type mark` : `${type} 类型印记`)}">
-        ${typeSigil(type)}
+      <img class="persona-type-character" src="${assetPath}" alt="" decoding="async" loading="lazy" onerror="this.parentElement.classList.add('is-fallback')">
+      <span class="persona-type-character-fallback" aria-hidden="true">${typeSigil(code, compact)}</span>`;
+  }
+
+  function assetSlot(type, sizeClass = "") {
+    const code = String(type || "TYPE").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+    return `
+      <div class="persona-asset-slot ${sizeClass}" data-type-character="${escHtml(code)}" role="img" aria-label="${escHtml(isEnLocale() ? `${code} type character` : `${code} 类型角色`)}">
+        ${typeCharacterAsset(code)}
       </div>`;
   }
 
@@ -1231,7 +1240,7 @@
       return `
         <button class="persona-type-card persona-family-${fid}" type="button" onclick="openType('${type}')">
           <span class="persona-family-badge">${familyName(type)}</span>
-          <span class="persona-type-asset" aria-hidden="true">${typeSigil(type, true)}</span>
+          <span class="persona-type-asset" data-type-character="${type}" aria-hidden="true">${typeCharacterAsset(type, true)}</span>
           <span class="persona-type-code">${type}</span>
           <h3>${escHtml(profile.nickname || type)}</h3>
           <p>${escHtml(profile.description || "")}</p>

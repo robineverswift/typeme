@@ -584,11 +584,9 @@ body.typeme-ui-active.persona-production-route #screen-library.screen.active{
   display:grid;
   place-items:center;
   border-radius:34px;
-  background:
-    linear-gradient(135deg,rgba(255,255,255,.42),transparent 45%),
-    radial-gradient(circle at 28% 18%,rgba(255,248,239,.24),transparent 35%),
-    linear-gradient(145deg,var(--family-color,var(--persona-diplomat)),var(--persona-ink-brown) 72%,#2d2a25);
-  color:#fffaf2;
+  overflow:hidden;
+  background:#f5f2ea;
+  color:var(--family-color,var(--persona-diplomat));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 18px 42px rgba(80,62,39,.13);
 }
 .persona-asset-slot:before,
@@ -609,6 +607,25 @@ body.typeme-ui-active.persona-production-route #screen-library.screen.active{
   color:#fffaf2;
   filter:drop-shadow(0 5px 12px rgba(36,33,29,.16));
 }
+.persona-type-character{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  width:100%;
+  height:100%;
+  display:block;
+  border-radius:inherit;
+  object-fit:cover;
+}
+.persona-type-character-fallback{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  display:none;
+  place-items:center;
+}
+[data-type-character].is-fallback .persona-type-character{display:none}
+[data-type-character].is-fallback .persona-type-character-fallback{display:grid}
 .persona-type-sigil *{vector-effect:non-scaling-stroke}
 .persona-type-sigil .sigil-frame,
 .persona-type-sigil .sigil-energy,
@@ -892,12 +909,14 @@ body.typeme-ui-active #screen-theory .persona-section-label i{
 }
 .persona-type-card:hover{transform:translateY(-2px);box-shadow:0 22px 50px rgba(86,54,43,.15)}
 .persona-type-asset{
+  position:relative;
   width:82px;
   height:82px;
   margin-bottom:18px;
   display:grid;
   place-items:center;
   border-radius:24px;
+  overflow:hidden;
   color:#fffaf2;
   font-weight:820;
   font-size:22px;
@@ -906,6 +925,12 @@ body.typeme-ui-active #screen-theory .persona-section-label i{
     linear-gradient(135deg,rgba(255,255,255,.35),transparent 42%),
     linear-gradient(145deg,var(--family-color),var(--persona-ink-brown) 76%,#2d2a25);
   box-shadow:0 12px 28px rgba(86,54,43,.12);
+}
+.persona-type-asset .persona-type-character-fallback{
+  background:
+    radial-gradient(circle at 30% 18%,rgba(255,248,239,.26),transparent 35%),
+    linear-gradient(135deg,rgba(255,255,255,.35),transparent 42%),
+    linear-gradient(145deg,var(--family-color),var(--persona-ink-brown) 76%,#2d2a25);
 }
 .persona-type-asset .persona-type-sigil{width:88%;height:88%}
 .persona-type-asset .persona-type-sigil .sigil-frame{opacity:.34}
