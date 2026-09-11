@@ -615,7 +615,8 @@ body.typeme-ui-active.persona-production-route #screen-library.screen.active{
   height:100%;
   display:block;
   border-radius:inherit;
-  object-fit:cover;
+  object-fit:contain;
+  background:#f5f2ea;
 }
 .persona-type-character-fallback{
   position:absolute;

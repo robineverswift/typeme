@@ -1086,9 +1086,9 @@
 
   function typeCharacterAsset(type, compact = false) {
     const code = String(type || "TYPE").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
-    const assetPath = `/assets/type-characters/${code.toLowerCase()}.webp`;
+    const assetPath = `/assets/type-characters/${code.toLowerCase()}.svg`;
     return `
-      <img class="persona-type-character" src="${assetPath}" alt="" decoding="async" loading="lazy" onerror="this.parentElement.classList.add('is-fallback')">
+      <img class="persona-type-character" src="${assetPath}" alt="" width="256" height="256" decoding="async" loading="lazy" onerror="this.parentElement.classList.add('is-fallback')">
       <span class="persona-type-character-fallback" aria-hidden="true">${typeSigil(code, compact)}</span>`;
   }
 
