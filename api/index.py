@@ -2,7 +2,7 @@
 """TypeMe — Vercel Serverless (Flask)."""
 import base64, hashlib, hmac, json, os, random, re, secrets, sys, time, traceback
 from pathlib import Path
-from urllib.parse import parse_qsl, quote, urlencode
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 from flask import Flask, request, jsonify, make_response
@@ -12,6 +12,7 @@ from request_guard import (
     SCORE_MAX_BODY_BYTES,
     RequestProblem,
     SlidingWindowLimiter,
+    normalize_deepseek_config,
     TTLResultCache,
     request_fingerprint,
     validate_analyze_payload,
@@ -52,8 +53,9 @@ PUBLIC = HERE / "public"
 
 # ── Config from env ──
 AI_API_KEY = os.environ.get("AI_API_KEY", os.environ.get("DEEPSEEK_API_KEY", "")).strip()
-AI_URL = os.environ.get("AI_URL", "https://api.deepseek.com/v1/chat/completions")
-AI_MODEL = os.environ.get("AI_MODEL", "deepseek-chat")
+AI_URL = os.environ.get("AI_URL", "https://api.deepseek.com/chat/completions")
+AI_MODEL = os.environ.get("AI_MODEL", "deepseek-flash")
+AI_URL, AI_MODEL = normalize_deepseek_config(AI_URL, AI_MODEL)
 AI_AUTH_HEADER = os.environ.get("AI_AUTH_HEADER", "Authorization")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -862,10 +864,15 @@ def call_ai(system_prompt, user_prompt, retries=2, temperature=0.3, max_tokens=4
     if system_prompt and system_prompt.strip():
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": user_prompt})
-    payload = json.dumps({
-        "model": AI_MODEL, "messages": messages,
-        "temperature": temperature, "max_tokens": max_tokens,
-    }).encode("utf-8")
+    request_payload = {
+        "model": AI_MODEL,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if (urlsplit(AI_URL).hostname or "").lower() == "api.deepseek.com":
+        request_payload["thinking"] = {"type": "disabled"}
+    payload = json.dumps(request_payload).encode("utf-8")
     req = urllib.request.Request(AI_URL, data=payload, method="POST")
     req.add_header("Content-Type", "application/json")
     req.add_header(AI_AUTH_HEADER, f"Bearer {AI_API_KEY}")
