@@ -1,4 +1,7 @@
-﻿(function () {
+Warning: truncated output (original token count: 33011)
+Total output lines: 2406
+
+(function () {
   "use strict";
 
   const families = {
@@ -106,6 +109,7 @@
       credibilityReviewed: "开放题已纳入分析",
       credibilityFallback: "开放题分析未完成，仅展示量表结果",
       credibilitySignal: "回答信息量",
+      analysisConfidence: "分析可信度",
       credibilityValid: (valid, total) => `${valid}/${total} 道回答信息充足`,
       credibilityFlags: "回答中包含",
       qualityFlagLabels: {
@@ -319,6 +323,7 @@
       credibilityReviewed: "Open answers included in the result",
       credibilityFallback: "Open-answer analysis incomplete; showing the scale result",
       credibilitySignal: "Answer detail",
+      analysisConfidence: "Analysis confidence",
       credibilityValid: (valid, total) => `${valid}/${total} answers have enough detail`,
       credibilityFlags: "Your answers include",
       qualityFlagLabels: {
@@ -928,243 +933,7 @@
       code: "INFP",
       family: "diplomats",
       symbols: ["NF", "价值", "A/T"],
-      title: "内在寻路者",
-      copy: "你会反复确认一件事是否对得起自己，也会因此更敏感地感到拉扯。",
-      chips: ["价值 · 63%", "内向能量", "情绪线索"],
-    },
-    {
-      type: "ISFJ-T",
-      code: "ISFJ",
-      family: "sentinels",
-      symbols: ["SJ", "守护", "A/T"],
-      title: "安静守护者",
-      copy: "你把很多细节记在心里，照顾别人时也在寻找自己的边界。",
-      chips: ["细节 · 64%", "稳定能量", "照顾线索"],
-    },
-    {
-      type: "ESTP-A",
-      code: "ESTP",
-      family: "explorers",
-      symbols: ["SP", "现场", "A/T"],
-      title: "现场行动者",
-      copy: "你更相信正在发生的事，会在行动里迅速修正方向。",
-      chips: ["行动 · 66%", "外向能量", "现场线索"],
-    },
-    {
-      type: "ENTJ-A",
-      code: "ENTJ",
-      family: "analysts",
-      symbols: ["NT", "推进", "A/T"],
-      title: "远景指挥者",
-      copy: "你看见目标后，会自然开始整理路径、资源和节奏。",
-      chips: ["结构 · 70%", "外向能量", "推进线索"],
-    },
-  ];
-
-  function pickHomePreview() {
-    return homePreviewDeck[Math.floor(Math.random() * homePreviewDeck.length)] || homePreviewDeck[0];
-  }
-
-  const $id = (id) => document.getElementById(id);
-
-  function normalizePersonaQuotes(value) {
-    return String(value ?? "")
-      .replace(/'([^'\n]{1,160})'/g, (match, inner) => /[\u4e00-\u9fff]/.test(inner) ? `“${inner.trim()}”` : match)
-      .replace(/"([^"\n]{1,160})"/g, (match, inner) => /[\u4e00-\u9fff]/.test(inner) ? `“${inner.trim()}”` : match)
-      .replace(/‘([^’\n]{1,160})’/g, (match, inner) => /[\u4e00-\u9fff]/.test(inner) ? `“${inner.trim()}”` : match)
-      .replace(/“([^”\n]{1,160})”/g, (match, inner) => /[\u4e00-\u9fff]/.test(inner) ? `“${inner.trim()}”` : match);
-  }
-
-  const escHtml = (value) => normalizePersonaQuotes(value).replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "\"": "&quot;",
-    "'": "&#39;",
-  })[char]);
-
-  function familyId(type) {
-    const raw = String(type || "").toLowerCase();
-    if (families[raw]) return raw;
-    const code = String(type || "").toUpperCase().match(/[IE][SN][TF][JP]/)?.[0] || String(type || "").toUpperCase().slice(0, 4);
-    return Object.entries(families).find(([, family]) => family.types.includes(code))?.[0] || "analysts";
-  }
-
-  function familyName(type) {
-    return localizedFamily(type).label || families[familyId(type)].label;
-  }
-
-  function applyTypeTheme(typeOrFamily) {
-    const fid = familyId(typeOrFamily);
-    document.body.classList.remove(...typeThemeClasses);
-    document.body.classList.add(`typeme-theme-${fid}`);
-    document.body.dataset.typeMeTheme = fid;
-    return fid;
-  }
-
-  function axisTags(type) {
-    const words = axisWordsByLocale[typeMeLocale] || axisWordsByLocale["zh-CN"];
-    return type.split("").map((letter) => words[letter] || letter);
-  }
-
-  function confidenceLabel(level) {
-    if (isEnLocale()) return level === "high" ? "High confidence" : level === "medium" ? "Medium confidence" : "Low confidence";
-    return level === "high" ? "高置信" : level === "medium" ? "中等置信" : "低置信";
-  }
-
-  const afterwordNotes = [
-    "反复出现的反应，本身就是线索。它们比标签更接近真实的你。",
-    "让人停住的那一段，往往藏着更真实的需要。",
-    "不完全贴合的部分，也许正说明你不是单一模式。",
-    "这份档案留下的是轮廓，细节会在之后的生活里慢慢显出来。",
-    "类型只是入口。更值得看的，是你在关系和压力里反复选择的方式。"
-  ];
-  const afterwordNotesEn = [
-    "A repeated reaction is already evidence. It often tells more than the label.",
-    "The moment that makes you pause usually points to a real need.",
-    "The parts that do not fit neatly may be where your range begins.",
-    "This profile keeps the outline. The finer details will keep appearing in ordinary life.",
-    "Type is only the entry point. The deeper pattern is how you choose under pressure and in relationship."
-  ];
-
-  function afterwordNote() {
-    const list = isEnLocale() ? afterwordNotesEn : afterwordNotes;
-    return list[Math.floor(Math.random() * list.length)];
-  }
-
-  function personaCandidatePanel(result, compact = false) {
-    const meta = sectionMeta("typeLanding");
-    const confidence = result?.confidence || {};
-    const candidates = Array.isArray(result?.candidate_types) ? result.candidate_types : [];
-    const uncertain = Array.isArray(confidence.uncertain_dimensions) ? confidence.uncertain_dimensions : [];
-    if (!candidates.length && !uncertain.length) return "";
-    const full = `${result.type}-${result.identity}`;
-    return `
-      <section class="${compact ? "persona-sidebar-card" : "persona-result-block"} persona-candidate-panel">
-        <span>${escHtml(meta.title)}</span>
-        <p>${escHtml(t("typeLandingCopy", full))}</p>
-        ${candidates.length ? `<div class="persona-candidate-list">${candidates.map((item, index) => `
-          <article class="${index === 0 ? "is-primary" : ""}">
-            <b>${escHtml(item.type)}-${escHtml(item.identity || result.identity)}</b>
-            <em>${escHtml(candidateReasonText(item.reason))}</em>
-            <span>${escHtml(item.confidence || "")}%</span>
-          </article>`).join("")}</div>` : ""}
-        ${uncertain.length ? `<div class="persona-tension-list">${uncertain.slice(0, 3).map((item) => {
-          const dim = dimensionLabel(item.dim);
-          return `<i>${escHtml(item.dim)} · ${escHtml(dim.name)} · ${escHtml(confidenceLabel(item.label))}</i>`;
-        }).join("")}</div>` : ""}
-      </section>`;
-  }
-
-  function typeSigil(type, compact = false) {
-    const code = String(type || "TYPE").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4).padEnd(4, "X");
-    const [energy, perception, decision, rhythm] = code;
-    const energyMark = energy === "E"
-      ? '<path class="sigil-energy" d="M18 50h64M68 38l14 12-14 12"/>'
-      : '<path class="sigil-energy" d="M50 18v64M38 32l12-14 12 14"/>';
-    const perceptionMark = perception === "N"
-      ? '<path class="sigil-perception" d="M50 25 75 50 50 75 25 50Z"/>'
-      : '<rect class="sigil-perception" x="28" y="28" width="44" height="44" rx="12"/>';
-    const decisionMark = decision === "T"
-      ? '<path class="sigil-decision" d="M34 38h32M50 38v28"/>'
-      : '<path class="sigil-decision" d="M31 43c10-13 28-13 38 0M31 57c10 13 28 13 38 0"/>';
-    const rhythmMark = rhythm === "J"
-      ? '<path class="sigil-rhythm" d="M18 31A38 38 0 0 1 69 18M82 69A38 38 0 0 1 31 82"/>'
-      : '<path class="sigil-rhythm" d="M20 34A38 38 0 0 1 66 19M80 66A38 38 0 0 1 34 81"/><circle class="sigil-node" cx="18" cy="38" r="3"/><circle class="sigil-node" cx="82" cy="62" r="3"/>';
-    const poles = [
-      energy === "E" ? [84, 50] : [16, 50],
-      perception === "N" ? [50, 16] : [50, 84],
-      decision === "T" ? [76, 24] : [24, 76],
-      rhythm === "J" ? [76, 76] : [24, 24],
-    ].map(([cx, cy], index) => `<circle class="sigil-pole pole-${index + 1}" cx="${cx}" cy="${cy}" r="${index === 0 ? 3.2 : 2.2}"/>`).join("");
-    return `<svg class="persona-type-sigil${compact ? " is-compact" : ""}" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-      <circle class="sigil-frame" cx="50" cy="50" r="42"/>
-      ${energyMark}${perceptionMark}${decisionMark}${rhythmMark}${poles}
-      ${compact ? "" : `<text class="sigil-code" x="50" y="54" text-anchor="middle">${escHtml(code)}</text>`}
-    </svg>`;
-  }
-
-  function typeCharacterAsset(type, compact = false) {
-    const code = String(type || "TYPE").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
-    const assetPath = `/assets/type-characters/${code.toLowerCase()}.svg`;
-    return `
-      <img class="persona-type-character" src="${assetPath}" alt="" width="256" height="256" decoding="async" loading="lazy" onerror="this.parentElement.classList.add('is-fallback')">
-      <span class="persona-type-character-fallback" aria-hidden="true">${typeSigil(code, compact)}</span>`;
-  }
-
-  function assetSlot(type, sizeClass = "") {
-    const code = String(type || "TYPE").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
-    return `
-      <div class="persona-asset-slot ${sizeClass}" data-type-character="${escHtml(code)}" role="img" aria-label="${escHtml(isEnLocale() ? `${code} type character` : `${code} 类型角色`)}">
-        ${typeCharacterAsset(code)}
-      </div>`;
-  }
-
-  async function ensureTypeMeQuestions() {
-    if (typeMeQuestions) return true;
-    if (typeof window.load === "function") {
-      try {
-        const loaded = await window.load();
-        const sharedQuestions = window.getTypeMeQuestions?.();
-        if (loaded && sharedQuestions) {
-          typeMeQuestions = sharedQuestions;
-          return true;
-        }
-      } catch {}
-    }
-    try {
-      const response = await fetch("/api/questions", { cache: "no-store" });
-      if (!response.ok) throw new Error("questions unavailable");
-      typeMeQuestions = await response.json();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function renderHomeTypePreview() {
-    const home = $id("screen-home");
-    if (!home) return;
-    const preview = localizedHomePreview(pickHomePreview());
-    applyTypeTheme(preview.family);
-    const active = home.classList.contains("active");
-    home.className = `screen persona-home-screen${active ? " active" : ""}`;
-    home.dataset.personaMounted = "1";
-    home.innerHTML = `
-      <div class="persona-production persona-home-production">
-        <div class="persona-production-hero">
-          <section>
-          <p class="persona-kicker">${escHtml(t("homeKicker"))}</p>
-          <h1>${escHtml(t("homeTitle"))}</h1>
-          <p class="persona-lead">${escHtml(t("homeLead"))}</p>
-          <div class="persona-resume-slot"><div id="resume" class="resume"></div></div>
-          <div class="typeme-actions">
-            <button class="typeme-action primary" type="button" data-typeme-route="test">${escHtml(t("startTest"))}</button>
-            <button class="typeme-action secondary" type="button" data-typeme-route="library">${escHtml(t("browseTypes"))}</button>
-            <button class="typeme-action ghost" type="button" data-typeme-route="theory">${escHtml(t("readGuide"))}</button>
-          </div>
-          <div class="persona-process" aria-label="${escHtml(isEnLocale() ? "TypeMe process" : "TypeMe 流程")}">
-            <span>${escHtml(t("processScale"))}</span><i></i><span>${escHtml(t("processPrompt"))}</span><i></i><span>${escHtml(t("processCheck"))}</span><i></i><span>${escHtml(t("processProfile"))}</span>
-          </div>
-          </section>
-          <aside class="persona-stage persona-family-${escHtml(preview.family)}" aria-label="${escHtml(isEnLocale() ? "Result preview" : "结果预览")}">
-            <div class="persona-preview-card">
-            <div class="persona-asset-zone">
-              ${assetSlot(preview.code)}
-              <div class="persona-symbols">${preview.symbols.map((item) => `<span>${escHtml(item)}</span>`).join("")}</div>
-            </div>
-            <div class="persona-preview-caption">
-              <span class="persona-type-code">${escHtml(preview.type)}</span>
-              <strong>${escHtml(preview.title)}</strong>
-              <p>${escHtml(preview.copy)}</p>
-            </div>
-            </div>
-            <div class="persona-floating-chip chip-a">${escHtml(preview.chips[0])}</div>
-            <div class="persona-floating-chip chip-b">${escHtml(preview.chips[1])}</div>
-            <div class="persona-floating-chip chip-c">${escHtml(preview.chips[2])}</div>
-          </aside>
-        </div>
-        <section class="persona-summary-grid" aria-label="${escHtml(isEnLocale() ? "TypeMe output summary" : "TypeMe 结果摘要")}">
+      tit…3011 tokens truncated…l(isEnLocale() ? "TypeMe output summary" : "TypeMe 结果摘要")}">
           <article class="persona-card"><span>${escHtml(t("summaryCoordinateKicker"))}</span><h3>${escHtml(t("summaryCoordinateTitle"))}</h3><p>${escHtml(t("summaryCoordinateCopy"))}</p></article>
           <article class="persona-card"><span>${escHtml(t("summaryEvidenceKicker"))}</span><h3>${escHtml(t("summaryEvidenceTitle"))}</h3><p>${escHtml(t("summaryEvidenceCopy"))}</p></article>
           <article class="persona-card"><span>${escHtml(t("summaryProfileKicker"))}</span><h3>${escHtml(t("summaryProfileTitle"))}</h3><p>${escHtml(t("summaryProfileCopy"))}</p></article>
@@ -2122,8 +1891,8 @@
     const note = localizedFamily(fid);
     const tags = axisTags(type);
     const hasFallback = !!(ai && (ai.ai_available === false || ai.is_fallback));
-    const confidence = verified && ai?.ai_confidence ? `<span class="persona-profile-chip">${escHtml(isEnLocale() ? "Analysis confidence" : "分析可信度")} ${escHtml(ai.ai_confidence)}%</span>` : "";
-    const quality = verified && ai?.answer_quality_score ? `<span class="persona-profile-chip">${escHtml(isEnLocale() ? "Answer detail" : "回答信息量")} ${escHtml(ai.answer_quality_score)}%</span>` : "";
+    const confidence = verified && ai?.ai_confidence ? `<span class="persona-profile-chip">${escHtml(t("analysisConfidence"))} ${escHtml(ai.ai_confidence)}%</span>` : "";
+    const quality = verified && ai?.answer_quality_score ? `<span class="persona-profile-chip">${escHtml(t("credibilitySignal"))} ${escHtml(ai.answer_quality_score)}%</span>` : "";
     const heroMeta = sectionMeta("resultHero");
     const coordinateMeta = sectionMeta("coordinates");
     const restoredMeta = sectionMeta("restored");
@@ -2401,3 +2170,4 @@
   }
   window.initializeTypeMeApp = initializeTypeMeApp;
 })();
+
