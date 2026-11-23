@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import sys
 import unittest
@@ -35,6 +36,42 @@ def analysis_payload(locale="en-US"):
 
 
 class PublicApiSafetyTests(unittest.TestCase):
+    def test_deepseek_legacy_settings_normalize_to_flash(self):
+        api = load_api()
+        self.assertEqual(
+            api.normalize_deepseek_config(
+                "https://api.deepseek.com/v1/chat/completions",
+                "deepseek-chat",
+            ),
+            ("https://api.deepseek.com/chat/completions", "deepseek-flash"),
+        )
+
+    def test_deepseek_flash_request_disables_thinking(self):
+        api = load_api()
+        api.AI_URL, api.AI_MODEL = api.normalize_deepseek_config(
+            "https://api.deepseek.com/v1/chat/completions",
+            "deepseek-chat",
+        )
+        api.AI_API_KEY = "test-key"
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return b'{"choices":[{"message":{"content":"ok"}}]}'
+
+        with patch("urllib.request.urlopen", return_value=FakeResponse()) as urlopen:
+            self.assertEqual(api.call_ai("system", "prompt", retries=0), "ok")
+        request = urlopen.call_args.args[0]
+        body = json.loads(request.data)
+        self.assertEqual(request.full_url, "https://api.deepseek.com/chat/completions")
+        self.assertEqual(body["model"], "deepseek-flash")
+        self.assertEqual(body["thinking"], {"type": "disabled"})
+
     def test_analyze_forwards_normalized_english_locale(self):
         api = load_api()
         result = {"ai_available": True, "analysis_locale": "en"}
