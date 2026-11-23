@@ -4,6 +4,7 @@ import threading
 import time
 from collections import OrderedDict, defaultdict, deque
 from copy import deepcopy
+from urllib.parse import urlsplit, urlunsplit
 
 
 SCORE_MAX_BODY_BYTES = 32_000
@@ -22,6 +23,22 @@ class RequestProblem(ValueError):
 
 def normalize_locale(value):
     return "en" if str(value or "").strip().lower().startswith("en") else "zh-CN"
+
+
+def normalize_deepseek_config(api_url, model):
+    """Normalize retired DeepSeek aliases without changing custom providers."""
+    api_url = str(api_url or "").strip()
+    model = str(model or "").strip()
+    parsed = urlsplit(api_url)
+    if (parsed.hostname or "").lower() != "api.deepseek.com":
+        return api_url, model
+
+    path = parsed.path.rstrip("/")
+    if path in {"", "/v1", "/v1/chat/completions"}:
+        api_url = urlunsplit((parsed.scheme, parsed.netloc, "/chat/completions", parsed.query, parsed.fragment))
+    if not model or model.lower() in {"deepseek-chat", "deepseek-reasoner"}:
+        model = "deepseek-flash"
+    return api_url, model
 
 
 def _require_object(payload):
